@@ -1,0 +1,211 @@
+{% extends 'shop/seller_base.html' %}
+
+{% block content %}
+<style>
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #e0e0e0; }
+    .tab { padding: 1rem 2rem; background: transparent; border: none; cursor: pointer; font-size: 1rem; color: #7f8c8d; transition: all 0.3s; border-bottom: 3px solid transparent; }
+    .tab:hover { color: #2c3e50; }
+    .tab.active { color: #3498db; border-bottom-color: #3498db; font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3498db; }
+    .stat-card h4 { font-size: 2rem; margin-bottom: 0.5rem; color: #2c3e50; }
+    .stat-card p { color: #7f8c8d; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+    table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid #ecf0f1; }
+    table th { background: #f8f9fa; color: #2c3e50; font-weight: 600; }
+    .btn { background: #3498db; color: white; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; display: inline-block; border: none; cursor: pointer; }
+    .btn:hover { background: #2980b9; }
+</style>
+
+<div class="tabs">
+    <button class="tab active" onclick="openTab(event, 'dashboard')">📊 Dashboard</button>
+    <button class="tab" onclick="openTab(event, 'orders')">🛒 Manage Orders</button>
+    <button class="tab" onclick="openTab(event, 'products')">📦 Manage Products</button>
+    <button class="tab" onclick="openTab(event, 'staff')">👥 Manage Staff</button>
+    <button class="tab" onclick="openTab(event, 'reports')">📈 Reports</button>
+</div>
+
+<div id="dashboard" class="tab-content active">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Dashboard Overview</h2>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <h4>{{ products.count }}</h4>
+            <p>Total Products</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #e74c3c;">
+            <h4>{{ orders.count }}</h4>
+            <p>Total Orders</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #f39c12;">
+            <h4>{{ staff_count }}</h4>
+            <p>Total Staff</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #27ae60;">
+            <h4>₹0</h4>
+            <p>Total Revenue</p>
+        </div>
+    </div>
+    
+    <h3 style="margin-bottom: 1rem; color: #2c3e50;">Recent Products</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products|slice:":5" %}
+            <tr>
+                <td>{{ product.product_name }}</td>
+                <td>{{ product.category }}</td>
+                <td>₹{{ product.selling_price }}</td>
+                <td>{{ product.stock }}</td>
+                <td>{{ product.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="orders" class="tab-content">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Orders</h2>
+    <button class="btn" style="margin-bottom: 1rem;">View All Orders</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6" style="text-align: center; color: #7f8c8d;">No orders available</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="products" class="tab-content">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Products</h2>
+    <a href="{% url 'add_product' %}" class="btn" style="margin-bottom: 1rem;">Add New Product</a>
+    <div style="overflow-x: auto;">
+        <table style="white-space: nowrap;">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Sub Category</th>
+                    <th>Quantity-Unit</th>
+                    <th>MRP</th>
+                    <th>Cost Price</th>
+                    <th>Base Price</th>
+                    <th>Selling Price</th>
+                    <th>Stock</th>
+                    <th>Source</th>
+                    <th>GST</th>
+                    <th>Created By</th>
+                    <th>Created At</th>
+                    <th>Modified By</th>
+                    <th>Modified At</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product.product_name }}</td>
+                    <td>{{ product.category }}</td>
+                    <td>{{ product.sub_category|default:"-" }}</td>
+                    <td>{{ product.quantity }}-{{ product.unit }}</td>
+                    <td>₹{{ product.mrp|default:"-" }}</td>
+                    <td>₹{{ product.cost_price|default:"-" }}</td>
+                    <td>₹{{ product.base_price|default:"-" }}</td>
+                    <td>₹{{ product.selling_price }}</td>
+                    <td>{{ product.stock }}</td>
+                    <td>{{ product.source|default:"-" }}</td>
+                    <td>{{ product.gst|default:"-" }}%</td>
+                    <td>{{ product.created_by|default:"-" }}</td>
+                    <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ product.modified_by|default:"-" }}</td>
+                    <td>{{ product.modified_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ product.status }}</td>
+                    <td><a href="{% url 'edit_product' product.id %}" class="btn">Edit</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="staff" class="tab-content">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Staff</h2>
+    <button class="btn" style="margin-bottom: 1rem;">Add New Staff</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Staff ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6" style="text-align: center; color: #7f8c8d;">No staff data available</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="reports" class="tab-content">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Reports</h2>
+    <div class="stats">
+        <div class="stat-card">
+            <h4>₹0</h4>
+            <p>Sales Report</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #9b59b6;">
+            <h4>0</h4>
+            <p>Inventory Report</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #1abc9c;">
+            <h4>0</h4>
+            <p>Staff Performance</p>
+        </div>
+        <div class="stat-card" style="border-left-color: #e67e22;">
+            <h4>0</h4>
+            <p>Customer Report</p>
+        </div>
+    </div>
+    <button class="btn">Generate Sales Report</button>
+    <button class="btn" style="background: #9b59b6;">Generate Inventory Report</button>
+    <button class="btn" style="background: #1abc9c;">Generate Staff Report</button>
+    <button class="btn" style="background: #e67e22;">Generate Customer Report</button>
+</div>
+
+<script>
+function openTab(evt, tabName) {
+    var i, tabcontent, tabs;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+    }
+    tabs = document.getElementsByClassName("tab");
+    for (i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove("active");
+    }
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+</script>
+{% endblock %}

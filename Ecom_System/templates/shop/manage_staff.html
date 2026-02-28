@@ -1,0 +1,51 @@
+{% extends 'shop/seller_base.html' %}
+
+{% block content %}
+<style>
+    .staff-container { max-width: 1200px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .staff-container h2 { color: #2c3e50; margin-bottom: 1.5rem; }
+    .btn-add { background: #27ae60; color: white; padding: 0.75rem 2rem; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+    table th { background: #34495e; color: white; }
+    .badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; }
+    .badge-active { background: #27ae60; color: white; }
+    .badge-inactive { background: #e74c3c; color: white; }
+</style>
+
+<div class="staff-container">
+    <a href="{% url 'add_staff' %}" class="btn-add">+ Add Staff</a>
+    <h2>Manage Staff (Business Code: {{ business_code }})</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Staff ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Phone</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for staff in staff_list %}
+            <tr>
+                <td>{{ staff.staff_id }}</td>
+                <td>{{ staff.full_name }}</td>
+                <td>{{ staff.email }}</td>
+                <td>{{ staff.staff_role }}</td>
+                <td>{{ staff.phone }}</td>
+                <td>
+                    <span class="badge badge-{{ staff.status|lower }}">{{ staff.status }}</span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No staff members found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

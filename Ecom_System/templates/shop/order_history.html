@@ -1,0 +1,340 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Order History{% endblock %}
+
+{% block content %}
+<style>
+body { background: #f8f9fa; }
+.order-card { background: white; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); min-height: 200px; }
+.order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 1rem; margin-bottom: 1rem; cursor: pointer; transition: background 0.2s; }
+.order-header:hover { background: #f8f9fa; border-radius: 5px; padding: 1rem; margin: -1rem; margin-bottom: 1rem; }
+.order-id { font-size: 1.1rem; font-weight: bold; color: #2c3e50; }
+.order-date { color: #7f8c8d; font-size: 0.9rem; }
+.status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+.status-pending { background: #e74c3c; color: white; }
+.status-placed { background: #3498db; color: white; }
+.status-confirmed { background: #27ae60; color: white; }
+.status-processing { background: #f39c12; color: white; }
+.status-shipped { background: #9b59b6; color: white; }
+.status-delivered { background: #16a085; color: white; }
+.status-cancelled { background: #e74c3c; color: white; }
+.order-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.detail-item { font-size: 0.9rem; display: inline-block; }
+.detail-label { color: #7f8c8d; font-weight: 600; }
+.detail-value { color: #2c3e50; }
+.no-orders { text-align: center; padding: 3rem; color: #7f8c8d; }
+.view-details-btn { background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+.view-details-btn:hover { background: #2980b9; }
+.order-items { display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e9ecef; }
+.order-items.show { display: block; }
+.order-tracking { display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e9ecef; }
+.order-tracking.show { display: block; }
+.payment-details { display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e9ecef; }
+.payment-details.show { display: block; }
+.payment-info { background: #f8f9fa; padding: 1rem; border-radius: 5px; }
+.payment-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #dee2e6; }
+.payment-row:last-child { border-bottom: none; }
+.tracking-timeline { position: relative; padding-left: 2rem; }
+.tracking-step { position: relative; padding-bottom: 1.5rem; }
+.tracking-step:before { content: ''; position: absolute; left: -1.5rem; top: 0.5rem; width: 12px; height: 12px; border-radius: 50%; background: #ddd; }
+.tracking-step.completed:before { background: #27ae60; }
+.tracking-step:after { content: ''; position: absolute; left: -1.44rem; top: 1.2rem; width: 2px; height: calc(100% - 0.5rem); background: #ddd; }
+.tracking-step:last-child:after { display: none; }
+.tracking-step.completed:after { background: #27ae60; }
+.tracking-label { font-weight: 600; color: #2c3e50; }
+.tracking-time { color: #7f8c8d; font-size: 0.85rem; }
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+.modal.show { display: flex; align-items: center; justify-content: center; }
+.modal-content { background: white; border-radius: 10px; padding: 2rem; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
+.modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; color: #7f8c8d; }
+.modal-close:hover { color: #2c3e50; }
+.tracking-horizontal { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; margin: 1rem 0; position: relative; }
+.h-step { display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; position: relative; }
+.h-step:not(:last-child):after { content: ''; position: absolute; top: 7.5px; left: 50%; width: 100%; height: 3px; background: #ddd; z-index: 0; }
+.h-step.completed:not(:last-child):after { background: #27ae60; }
+.h-step-icon { width: 15px; height: 15px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-bottom: 0.5rem; font-size: 0.85rem; }
+.h-step.completed .h-step-icon { background: #27ae60; }
+.h-step-label { font-size: 0.85rem; font-weight: 600; color: #2c3e50; text-align: center; }
+.h-step-time { font-size: 0.75rem; color: #7f8c8d; text-align: center; margin-top: 0.25rem; }
+</style>
+
+<div class="container mt-4">
+    <h2 class="mb-4" style="color: #2c3e50; font-weight: bold;">Order History</h2>
+    
+    {% if orders %}
+        {% for order in orders %}
+        <div class="order-card">
+            <div class="order-header" onclick="showOrderDetailsModal('{{ order.order_id }}')" style="cursor: pointer;">
+                <div>
+                    <div class="order-id" style="color: #2c3e50;">{{ order.order_id }}</div>
+                    <div class="order-date">Placed on {{ order.placed_at|date:"d M Y, h:i A" }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Total Amount</div>
+                    <div class="detail-value" style="font-size: 1.2rem; font-weight: bold; color: #27ae60;">₹{{ order.total_amount }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Payment Method</div>
+                    <div class="detail-value">{{ order.payment_method }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Payment Status</div>
+                    <div class="detail-value">{{ order.payment_status }}</div>
+                </div>
+                <div style="text-align: right;">
+                    <span class="status-badge status-{% if order.payment_status == 'Pending' %}pending{% else %}{{ order.order_status|lower }}{% endif %}">{% if order.payment_status == 'Pending' %}Pending{% else %}{{ order.order_status }}{% endif %}</span>
+                    <div class="order-date" style="margin-top: 0.3rem;">
+                        {% if order.order_status == 'Placed' and order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Confirmed' and order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Processing' and order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Shipped' and order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Delivered' and order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Cancelled' and order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                <button class="view-details-btn" style="background: #9b59b6;" onclick="event.stopPropagation(); showTrackingModal('{{ order.order_id }}')">Track Order</button>
+            </div>
+            </div>
+            
+            {% if order.order_status != 'Delivered' and order.order_status != 'Cancelled' %}
+            <div class="tracking-horizontal">
+                <div class="h-step {% if order.placed_at %}completed{% endif %}">
+                    <div class="h-step-icon">✓</div>
+                    <div class="h-step-label">Placed</div>
+                    {% if order.placed_at %}<div class="h-step-time">{{ order.placed_at|date:"d M Y" }}</div>{% endif %}
+                </div>
+                <div class="h-step {% if order.confirmed_at %}completed{% endif %}">
+                    <div class="h-step-icon">✓</div>
+                    <div class="h-step-label">Confirmed</div>
+                    {% if order.confirmed_at %}<div class="h-step-time">{{ order.confirmed_at|date:"d M Y" }}</div>{% endif %}
+                </div>
+                <div class="h-step {% if order.processing_at %}completed{% endif %}">
+                    <div class="h-step-icon">✓</div>
+                    <div class="h-step-label">Processing</div>
+                    {% if order.processing_at %}<div class="h-step-time">{{ order.processing_at|date:"d M Y" }}</div>{% endif %}
+                </div>
+                <div class="h-step {% if order.shipped_at %}completed{% endif %}">
+                    <div class="h-step-icon">✓</div>
+                    <div class="h-step-label">Shipped</div>
+                    {% if order.shipped_at %}<div class="h-step-time">{{ order.shipped_at|date:"d M Y" }}</div>{% endif %}
+                </div>
+                <div class="h-step {% if order.delivered_at %}completed{% endif %}">
+                    <div class="h-step-icon">✓</div>
+                    <div class="h-step-label">Delivered</div>
+                    {% if order.delivered_at %}<div class="h-step-time">{{ order.delivered_at|date:"d M Y" }}</div>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+            </div>
+
+        {% endfor %}
+    {% else %}
+        <div class="order-card">
+            <div class="no-orders">
+                <h4>No orders yet</h4>
+                <p>Start shopping to see your orders here!</p>
+                <a href="/" class="btn btn-primary mt-3">Start Shopping</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Tracking Modal -->
+<div id="trackingModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeTrackingModal()">&times;</span>
+        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Order Tracking</h5>
+        <div id="modalTrackingContent"></div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div id="orderDetailsModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeOrderDetailsModal()">&times;</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h5 style="color: #2c3e50; font-weight: bold; margin: 0;">Order Details</h5>
+            <button id="invoiceBtn" class="view-details-btn" style="background: #e67e22;" onclick="">View Invoice</button>
+        </div>
+        <div id="modalOrderDetailsContent"></div>
+    </div>
+</div>
+
+<script>
+const orderItemsData = {
+    {% for order in orders %}
+    '{{ order.order_id }}': {% if order.comments %}{{ order.comments|safe }}{% else %}[]{% endif %},
+    {% endfor %}
+};
+
+console.log('Order Items Data:', orderItemsData);
+
+const orderPaymentData = {
+    {% for order in orders %}
+    '{{ order.order_id }}': {
+        payment_method: '{{ order.payment_method }}',
+        payment_status: '{{ order.payment_status }}'
+    },
+    {% endfor %}
+};
+
+const trackingData = {
+    {% for order in orders %}
+    '{{ order.order_id }}': {
+        placed_at: '{% if order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}{% endif %}',
+        confirmed_at: '{% if order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}{% endif %}',
+        processing_at: '{% if order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}{% endif %}',
+        shipped_at: '{% if order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}{% endif %}',
+        delivered_at: '{% if order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}{% endif %}',
+        tracking_number: '{% if order.tracking_number %}{{ order.tracking_number }}{% endif %}',
+        ship_name: '{{ order.ship_name }}',
+        ship_phone: '{{ order.ship_phone }}',
+        ship_address1: '{{ order.ship_address1 }}',
+        ship_address2: '{% if order.ship_address2 %}{{ order.ship_address2 }}{% endif %}',
+        ship_city: '{{ order.ship_city }}',
+        ship_state: '{{ order.ship_state }}',
+        ship_pin: '{{ order.ship_pin }}'
+    },
+    {% endfor %}
+};
+
+function showTrackingModal(orderId) {
+    const modal = document.getElementById('trackingModal');
+    const content = document.getElementById('modalTrackingContent');
+    const tracking = trackingData[orderId];
+    
+    let html = '<div style="display: flex; gap: 2rem;">';
+    html += '<div style="flex: 1;">';
+    html += '<div class="tracking-timeline">';
+    html += '<div class="tracking-step' + (tracking.placed_at ? ' completed' : '') + '">';
+    html += '<div class="tracking-label">Placed</div>';
+    if (tracking.placed_at) html += '<div class="tracking-time">' + tracking.placed_at + '</div>';
+    html += '</div>';
+    
+    html += '<div class="tracking-step' + (tracking.confirmed_at ? ' completed' : '') + '">';
+    html += '<div class="tracking-label">Confirmed</div>';
+    if (tracking.confirmed_at) html += '<div class="tracking-time">' + tracking.confirmed_at + '</div>';
+    html += '</div>';
+    
+    html += '<div class="tracking-step' + (tracking.processing_at ? ' completed' : '') + '">';
+    html += '<div class="tracking-label">Processing</div>';
+    if (tracking.processing_at) html += '<div class="tracking-time">' + tracking.processing_at + '</div>';
+    html += '</div>';
+    
+    html += '<div class="tracking-step' + (tracking.shipped_at ? ' completed' : '') + '">';
+    html += '<div class="tracking-label">Shipped</div>';
+    if (tracking.shipped_at) html += '<div class="tracking-time">' + tracking.shipped_at + '</div>';
+    if (tracking.tracking_number) html += '<div class="tracking-time">Tracking: ' + tracking.tracking_number + '</div>';
+    html += '</div>';
+    
+    html += '<div class="tracking-step' + (tracking.delivered_at ? ' completed' : '') + '">';
+    html += '<div class="tracking-label">Delivered</div>';
+    if (tracking.delivered_at) html += '<div class="tracking-time">' + tracking.delivered_at + '</div>';
+    html += '</div>';
+    html += '</div></div>';
+    
+    html += '<div style="flex: 0 0 250px; background: #f8f9fa; padding: 1rem; border-radius: 8px;">';
+    html += '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 1rem;">Delivery Details</h6>';
+    html += '<div style="color: #2c3e50; font-size: 0.9rem; line-height: 1.6;">';
+    html += '<strong>Name:</strong> ' + tracking.ship_name + '<br>';
+    html += '<strong>Phone:</strong> ' + tracking.ship_phone + '<br>';
+    html += '<strong>Address:</strong> ' + tracking.ship_address1;
+    if (tracking.ship_address2) html += ', ' + tracking.ship_address2;
+    html += '<br>' + tracking.ship_city + ', ' + tracking.ship_state + ' - ' + tracking.ship_pin;
+    html += '</div></div></div>';
+    
+    content.innerHTML = html;
+    modal.classList.add('show');
+}
+
+function closeTrackingModal() {
+    document.getElementById('trackingModal').classList.remove('show');
+}
+
+function showOrderDetailsModal(orderId) {
+    const modal = document.getElementById('orderDetailsModal');
+    const content = document.getElementById('modalOrderDetailsContent');
+    let items = orderItemsData[orderId];
+    
+    if (typeof items === 'string') {
+        try {
+            items = JSON.parse(items);
+        } catch (e) {
+            items = [];
+        }
+    }
+    
+    document.getElementById('invoiceBtn').onclick = function() { window.open('/view-invoice/' + orderId + '/', '_blank'); };
+    
+    let html = '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 1rem;">Order Items</h6>';
+    if (items && Array.isArray(items) && items.length > 0) {
+        html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">';
+        html += '<thead><tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">';
+        html += '<th style="padding: 0.75rem; text-align: left;">Product</th>';
+        html += '<th style="padding: 0.75rem; text-align: center;">Quantity</th>';
+        html += '<th style="padding: 0.75rem; text-align: right;">Price</th>';
+        html += '<th style="padding: 0.75rem; text-align: right;">Total</th>';
+        html += '</tr></thead><tbody>';
+        
+        let subtotal = 0, totalMRP = 0;
+        items.forEach(item => {
+            subtotal += (item.price || 0) * (item.quantity || 0);
+            totalMRP += ((item.mrp || item.price) || 0) * (item.quantity || 0);
+            html += '<tr style="border-bottom: 1px solid #dee2e6;">';
+            html += '<td style="padding: 0.75rem;">' + (item.name || 'N/A') + '</td>';
+            html += '<td style="padding: 0.75rem; text-align: center;">' + (item.quantity || 0) + '</td>';
+            html += '<td style="padding: 0.75rem; text-align: right;">₹' + (item.price || 0).toFixed(2) + '</td>';
+            html += '<td style="padding: 0.75rem; text-align: right; font-weight: bold;">₹' + ((item.price || 0) * (item.quantity || 0)).toFixed(2) + '</td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        
+        let totalDiscount = totalMRP - subtotal;
+        let deliveryCharges = subtotal > 500 ? 0 : 50;
+        let total = subtotal + deliveryCharges;
+        
+        html += '<div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; font-size: 0.9rem;">';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span>Total MRP:</span><span>₹' + totalMRP.toFixed(2) + '</span></div>';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #27ae60;"><span>Discount:</span><span>-₹' + totalDiscount.toFixed(2) + '</span></div>';
+        html += '<hr style="margin: 0.5rem 0;">';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span>Subtotal:</span><span>₹' + subtotal.toFixed(2) + '</span></div>';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;"><span>Delivery:</span><span>' + (deliveryCharges > 0 ? '₹' + deliveryCharges.toFixed(2) : 'Free') + '</span></div>';
+        html += '<hr style="margin: 0.5rem 0; border-top: 2px solid #dee2e6;">';
+        html += '<div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold;"><span>Total:</span><span style="color: #27ae60;">₹' + total.toFixed(2) + '</span></div>';
+        html += '</div>';
+        
+        const payment = orderPaymentData[orderId];
+        if (payment) {
+            html += '<div style="display: flex; gap: 2rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">';
+            html += '<div><span style="color: #7f8c8d; font-weight: 600;">Payment Method: </span><span style="color: #2c3e50;">' + payment.payment_method + '</span></div>';
+            html += '<div><span style="color: #7f8c8d; font-weight: 600;">Payment Status: </span><span style="color: #2c3e50;">' + payment.payment_status + '</span></div>';
+            html += '</div>';
+        }
+    } else {
+        html += '<p style="color: #7f8c8d;">No item details available</p>';
+    }
+    
+    content.innerHTML = html;
+    modal.classList.add('show');
+}
+
+function closeOrderDetailsModal() {
+    document.getElementById('orderDetailsModal').classList.remove('show');
+}
+
+window.onclick = function(event) {
+    const trackingModal = document.getElementById('trackingModal');
+    const detailsModal = document.getElementById('orderDetailsModal');
+    if (event.target === trackingModal) {
+        closeTrackingModal();
+    }
+    if (event.target === detailsModal) {
+        closeOrderDetailsModal();
+    }
+}
+
+
+</script>
+{% endblock %}

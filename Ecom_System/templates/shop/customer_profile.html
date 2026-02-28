@@ -1,0 +1,532 @@
+{% extends 'shop/base.html' %}
+
+{% block content %}
+<style>
+    .profile-container { max-width: 800px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .profile-container h2 { color: #2c3e50; margin-bottom: 1.5rem; }
+    .profile-pic-section { text-align: center; margin-bottom: 2rem; }
+    .profile-pic { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid #3498db; }
+    .profile-pic-placeholder { width: 150px; height: 150px; border-radius: 50%; background: #ecf0f1; display: inline-flex; align-items: center; justify-content: center; font-size: 3rem; color: #95a5a6; border: 4px solid #3498db; }
+    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem; }
+    .info-item { padding: 0.75rem; background: #f8f9fa; border-radius: 4px; }
+    .info-item label { display: block; font-size: 0.85rem; color: #7f8c8d; margin-bottom: 0.25rem; }
+    .info-item .value { color: #2c3e50; font-weight: 600; }
+    .form-group { margin-bottom: 1rem; position: relative; }
+    .form-group label { display: block; margin-bottom: 0.5rem; color: #34495e; font-weight: bold; }
+    .form-group input { width: 100%; padding: 0.75rem; border: 1px solid #bdc3c7; border-radius: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .btn { background: #3498db; color: white; border: none; padding: 0.75rem 2rem; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+    .btn:hover { background: #2980b9; }
+    .btn-edit { background: #e67e22; }
+    .btn-edit:hover { background: #d35400; }
+    .btn-cancel { background: #95a5a6; }
+    .btn-cancel:hover { background: #7f8c8d; }
+    .btn-verify { background: #27ae60; padding: 0.5rem 1rem; font-size: 0.85rem; }
+    .btn-verify:hover { background: #229954; }
+    .success { background: #2ecc71; color: white; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    .section-title { color: #2c3e50; font-weight: bold; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; }
+    #viewMode { display: block; }
+    #editMode { display: none; }
+    .verify-btn { position: absolute; right: 0; top: 2rem; }
+    .otp-input { display: none; margin-top: 0.5rem; }
+    .address-card { background: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1rem; position: relative; }
+    .address-card.default { border: 2px solid #27ae60; }
+    .address-badge { background: #27ae60; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; }
+    .btn-delete { background: #e74c3c; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-delete:hover { background: #c0392b; }
+    .btn-edit-addr { background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 0.5rem; }
+    .btn-edit-addr:hover { background: #2980b9; }
+    .btn-default { background: #f39c12; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 0.5rem; }
+    .btn-default:hover { background: #e67e22; }
+    .address-actions { opacity: 0; transition: opacity 0.3s; }
+    .address-card:hover .address-actions { opacity: 1; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 2rem; border-radius: 8px; max-width: 500px; }
+    .modal-close { float: right; font-size: 1.5rem; cursor: pointer; }
+</style>
+
+<div class="profile-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0;">My Profile</h2>
+        <button id="editBtn" class="btn btn-edit" onclick="toggleEditMode()">Edit Profile</button>
+    </div>
+    
+    {% if success %}
+    <div class="success">{{ success }}</div>
+    {% endif %}
+    
+    <div id="viewMode">
+        <div class="profile-pic-section">
+            {% if profile.profile_pic %}
+            <img src="{{ profile.profile_pic.url }}" class="profile-pic" alt="Profile Picture">
+            {% else %}
+            <div class="profile-pic-placeholder">{{ user.first_name.0|upper }}</div>
+            {% endif %}
+        </div>
+        
+        <h3 class="section-title">Personal Information</h3>
+        <div class="info-row">
+            <div class="info-item">
+                <label>Username</label>
+                <div class="value">{{ user.username }}</div>
+            </div>
+            <div class="info-item">
+                <label>First Name</label>
+                <div class="value">{{ user.first_name }}</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <label>Middle Name</label>
+                <div class="value">{{ user.middle_name|default:'-' }}</div>
+            </div>
+            <div class="info-item">
+                <label>Last Name</label>
+                <div class="value">{{ user.last_name }}</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <label>Email</label>
+                <div class="value">{{ user.email }}</div>
+            </div>
+            <div class="info-item">
+                <label>Phone</label>
+                <div class="value">{{ user.phone }}</div>
+            </div>
+        </div>
+        
+        <h3 class="section-title">Address Information</h3>
+        <div class="info-row">
+            <div class="info-item">
+                <label>Address Line 1</label>
+                <div class="value">{{ profile.address1|default:'-' }}</div>
+            </div>
+            <div class="info-item">
+                <label>Address Line 2</label>
+                <div class="value">{{ profile.address2|default:'-' }}</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <label>City</label>
+                <div class="value">{{ profile.city|default:'-' }}</div>
+            </div>
+            <div class="info-item">
+                <label>State</label>
+                <div class="value">{{ profile.state|default:'-' }}</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <label>PIN Code</label>
+                <div class="value">{{ profile.pin|default:'-' }}</div>
+            </div>
+            <div class="info-item">
+                <label>Country</label>
+                <div class="value">{{ profile.country|default:'-' }}</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <label>Phone 1</label>
+                <div class="value">{{ profile.phone1|default:'-' }}</div>
+            </div>
+            <div class="info-item">
+                <label>Phone 2</label>
+                <div class="value">{{ profile.phone2|default:'-' }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="editMode">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="profile-pic-section">
+                {% if profile.profile_pic %}
+                <img src="{{ profile.profile_pic.url }}" class="profile-pic" id="profilePicPreview" alt="Profile Picture">
+                {% else %}
+                <div class="profile-pic-placeholder" id="profilePicPreview">{{ user.first_name.0|upper }}</div>
+                {% endif %}
+                <div style="margin-top: 1rem;">
+                    <input type="file" name="profile_picture" id="profilePicInput" accept="image/*" onchange="previewImage(this)" style="display: none;">
+                    <button type="button" class="btn btn-edit" onclick="document.getElementById('profilePicInput').click()">Change Picture</button>
+                </div>
+            </div>
+            
+            <h3 class="section-title">Personal Information</h3>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" value="{{ user.username }}" readonly style="background: #e9ecef; cursor: not-allowed;">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" name="first_name" value="{{ user.first_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Middle Name</label>
+                    <input type="text" name="middle_name" value="{{ user.middle_name|default:'' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" name="last_name" value="{{ user.last_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" id="emailInput" value="{{ user.email }}" onchange="checkEmailChange()">
+                    <button type="button" class="btn btn-verify verify-btn" id="emailVerifyBtn" style="display: none;" onclick="sendEmailOTP()">Send OTP</button>
+                    <div class="otp-input" id="emailOtpDiv">
+                        <input type="text" name="email_otp" id="emailOtpInput" placeholder="Enter OTP" style="width: 150px; margin-right: 0.5rem;">
+                        <button type="button" class="btn btn-verify" onclick="verifyEmailOTP()">Verify OTP</button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" name="phone" id="phoneInput" value="{{ user.phone }}" onchange="checkPhoneChange()">
+                <button type="button" class="btn btn-verify verify-btn" id="phoneVerifyBtn" style="display: none;" onclick="sendPhoneOTP()">Send OTP</button>
+                <div class="otp-input" id="phoneOtpDiv">
+                    <input type="text" name="phone_otp" id="phoneOtpInput" placeholder="Enter OTP" style="width: 150px; margin-right: 0.5rem;">
+                    <button type="button" class="btn btn-verify" onclick="verifyPhoneOTP()">Verify OTP</button>
+                </div>
+            </div>
+            
+            <h3 class="section-title">Address Information</h3>
+            <div class="form-group">
+                <label>Address Line 1</label>
+                <input type="text" name="address1" value="{{ profile.address1|default:'' }}">
+            </div>
+            <div class="form-group">
+                <label>Address Line 2</label>
+                <input type="text" name="address2" value="{{ profile.address2|default:'' }}">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" name="city" value="{{ profile.city|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label>State</label>
+                    <input type="text" name="state" value="{{ profile.state|default:'' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>PIN Code</label>
+                    <input type="text" name="pin" value="{{ profile.pin|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label>Country</label>
+                    <input type="text" name="country" value="{{ profile.country|default:'' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Phone 1</label>
+                    <input type="text" name="phone1" value="{{ profile.phone1|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label>Phone 2</label>
+                    <input type="text" name="phone2" value="{{ profile.phone2|default:'' }}">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn">Save Changes</button>
+                <button type="button" class="btn btn-cancel" onclick="toggleEditMode()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="profile-container" style="margin-top: 2rem;">
+    <h2>Saved Addresses</h2>
+    
+    <h3 class="section-title">Billing Addresses</h3>
+    {% if billing_addresses %}
+        {% for address in billing_addresses %}
+        <div class="address-card {% if address.is_default %}default{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <strong>{{ address.name }}</strong> {% if address.is_default %}<span class="address-badge">Default</span>{% endif %}
+                    <div style="color: #7f8c8d; font-size: 0.9rem; margin-top: 0.5rem;">
+                        {{ address.address1 }}{% if address.address2 %}, {{ address.address2 }}{% endif %}<br>
+                        {{ address.city }}, {{ address.state }} - {{ address.pin }}<br>
+                        {{ address.country }}<br>
+                        Phone: {{ address.phone }}
+                    </div>
+                </div>
+                <div class="address-actions">
+                    {% if not address.is_default %}<button class="btn-default" onclick="setDefault({{ address.id }})">Set Default</button>{% endif %}
+                    <button class="btn-edit-addr" onclick="openEditModal({{ address.id }}, '{{ address.name }}', '{{ address.phone }}', '{{ address.address1 }}', '{{ address.address2 }}', '{{ address.city }}', '{{ address.state }}', '{{ address.pin }}', '{{ address.country }}')">Edit</button>
+                    <button class="btn-delete" onclick="deleteAddress({{ address.id }})">Delete</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: #7f8c8d;">No billing addresses saved</p>
+    {% endif %}
+    
+    <h3 class="section-title">Shipping Addresses</h3>
+    {% if shipping_addresses %}
+        {% for address in shipping_addresses %}
+        <div class="address-card {% if address.is_default %}default{% endif %}">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <strong>{{ address.name }}</strong> {% if address.is_default %}<span class="address-badge">Default</span>{% endif %}
+                    <div style="color: #7f8c8d; font-size: 0.9rem; margin-top: 0.5rem;">
+                        {{ address.address1 }}{% if address.address2 %}, {{ address.address2 }}{% endif %}<br>
+                        {{ address.city }}, {{ address.state }} - {{ address.pin }}<br>
+                        {{ address.country }}<br>
+                        Phone: {{ address.phone }}
+                    </div>
+                </div>
+                <div class="address-actions">
+                    {% if not address.is_default %}<button class="btn-default" onclick="setDefault({{ address.id }})">Set Default</button>{% endif %}
+                    <button class="btn-edit-addr" onclick="openEditModal({{ address.id }}, '{{ address.name }}', '{{ address.phone }}', '{{ address.address1 }}', '{{ address.address2 }}', '{{ address.city }}', '{{ address.state }}', '{{ address.pin }}', '{{ address.country }}')">Edit</button>
+                    <button class="btn-delete" onclick="deleteAddress({{ address.id }})">Delete</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: #7f8c8d;">No shipping addresses saved</p>
+    {% endif %}
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="closeEditModal()">&times;</span>
+        <h3>Edit Address</h3>
+        <input type="hidden" id="editAddressId">
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="editName" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="editPhone" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Address Line 1</label>
+            <input type="text" id="editAddress1" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Address Line 2</label>
+            <input type="text" id="editAddress2" class="form-control">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" id="editCity" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>State</label>
+                <input type="text" id="editState" class="form-control">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>PIN Code</label>
+                <input type="text" id="editPin" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Country</label>
+                <input type="text" id="editCountry" class="form-control">
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button class="btn" onclick="saveAddress()">Save</button>
+            <button class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const originalEmail = "{{ user.email }}";
+const originalPhone = "{{ user.phone }}";
+
+function toggleEditMode() {
+    const viewMode = document.getElementById('viewMode');
+    const editMode = document.getElementById('editMode');
+    const editBtn = document.getElementById('editBtn');
+    
+    if (viewMode.style.display === 'none') {
+        viewMode.style.display = 'block';
+        editMode.style.display = 'none';
+        editBtn.style.display = 'block';
+    } else {
+        viewMode.style.display = 'none';
+        editMode.style.display = 'block';
+        editBtn.style.display = 'none';
+    }
+}
+
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('profilePicPreview');
+            if (preview.tagName === 'IMG') {
+                preview.src = e.target.result;
+            } else {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'profile-pic';
+                img.id = 'profilePicPreview';
+                preview.parentNode.replaceChild(img, preview);
+            }
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function checkEmailChange() {
+    const emailInput = document.getElementById('emailInput');
+    const verifyBtn = document.getElementById('emailVerifyBtn');
+    const otpDiv = document.getElementById('emailOtpDiv');
+    
+    if (emailInput.value !== originalEmail) {
+        verifyBtn.style.display = 'block';
+    } else {
+        verifyBtn.style.display = 'none';
+        otpDiv.style.display = 'none';
+    }
+}
+
+function checkPhoneChange() {
+    const phoneInput = document.getElementById('phoneInput');
+    const verifyBtn = document.getElementById('phoneVerifyBtn');
+    const otpDiv = document.getElementById('phoneOtpDiv');
+    
+    if (phoneInput.value !== originalPhone) {
+        verifyBtn.style.display = 'block';
+    } else {
+        verifyBtn.style.display = 'none';
+        otpDiv.style.display = 'none';
+    }
+}
+
+function sendEmailOTP() {
+    const email = document.getElementById('emailInput').value;
+    // TODO: Implement OTP sending logic via AJAX
+    alert('OTP sent to ' + email);
+    document.getElementById('emailOtpDiv').style.display = 'block';
+    document.getElementById('emailVerifyBtn').textContent = 'Resend OTP';
+}
+
+function sendPhoneOTP() {
+    const phone = document.getElementById('phoneInput').value;
+    // TODO: Implement OTP sending logic via AJAX
+    alert('OTP sent to ' + phone);
+    document.getElementById('phoneOtpDiv').style.display = 'block';
+    document.getElementById('phoneVerifyBtn').textContent = 'Resend OTP';
+}
+
+function verifyEmailOTP() {
+    const otp = document.getElementById('emailOtpInput').value;
+    // TODO: Implement OTP verification logic via AJAX
+    if (otp) {
+        alert('Email OTP verified successfully!');
+        document.getElementById('emailOtpDiv').style.display = 'none';
+        document.getElementById('emailVerifyBtn').style.display = 'none';
+    } else {
+        alert('Please enter OTP');
+    }
+}
+
+function verifyPhoneOTP() {
+    const otp = document.getElementById('phoneOtpInput').value;
+    // TODO: Implement OTP verification logic via AJAX
+    if (otp) {
+        alert('Phone OTP verified successfully!');
+        document.getElementById('phoneOtpDiv').style.display = 'none';
+        document.getElementById('phoneVerifyBtn').style.display = 'none';
+    } else {
+        alert('Please enter OTP');
+    }
+}
+
+function deleteAddress(addressId) {
+    if (!confirm('Delete this address?')) return;
+    
+    fetch(`/delete-address/${addressId}/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to delete address');
+        }
+    });
+}
+
+function openEditModal(id, name, phone, addr1, addr2, city, state, pin, country) {
+    document.getElementById('editAddressId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editPhone').value = phone;
+    document.getElementById('editAddress1').value = addr1;
+    document.getElementById('editAddress2').value = addr2;
+    document.getElementById('editCity').value = city;
+    document.getElementById('editState').value = state;
+    document.getElementById('editPin').value = pin;
+    document.getElementById('editCountry').value = country;
+    document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+function saveAddress() {
+    const id = document.getElementById('editAddressId').value;
+    const formData = new FormData();
+    formData.append('name', document.getElementById('editName').value);
+    formData.append('phone', document.getElementById('editPhone').value);
+    formData.append('address1', document.getElementById('editAddress1').value);
+    formData.append('address2', document.getElementById('editAddress2').value);
+    formData.append('city', document.getElementById('editCity').value);
+    formData.append('state', document.getElementById('editState').value);
+    formData.append('pin', document.getElementById('editPin').value);
+    formData.append('country', document.getElementById('editCountry').value);
+    
+    fetch(`/edit-address/${id}/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to update address');
+        }
+    });
+}
+
+function setDefault(addressId) {
+    fetch('/set-default-address/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `address_id=${addressId}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to set default address');
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,237 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}{{ product.product_name }}{% endblock %}
+
+{% block content %}
+<style>
+body { background: #f8f9fa; }
+.product-detail { background: white; border-radius: 10px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.product-image { width: 100%; height: 300px; object-fit: cover; border-radius: 8px; }
+.product-info { font-size: 0.95rem; line-height: 2; }
+.product-info strong { color: #2c3e50; min-width: 150px; display: inline-block; }
+.cart-sidebar { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; position: sticky; top: 20px; }
+.cart-title { font-size: 1.3rem; font-weight: bold; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+.cart-item { background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+.cart-item-name { font-weight: 600; color: #2c3e50; font-size: 0.9rem; }
+.cart-empty { text-align: center; color: #95a5a6; padding: 30px 0; font-size: 0.95rem; }
+.btn-add { background: #3498db; color: white; border: none; font-weight: 500; }
+.btn-add:hover { background: #2980b9; color: white; }
+.btn-checkout { background: #27ae60; color: white; border: none; font-weight: 600; padding: 12px; }
+.btn-checkout:hover { background: #229954; color: white; }
+</style>
+
+<div class="container-fluid">
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary mb-3">← Back to Shop</a>
+    
+    <div class="row">
+        <div class="col-md-9">
+            <div class="product-detail">
+                <div class="row">
+                    <div class="col-md-5">
+                        {% if product.images.first %}
+                        <img src="{{ product.images.first.image.url }}" class="product-image" alt="{{ product.product_name }}">
+                        {% else %}
+                        <div class="product-image bg-secondary d-flex align-items-center justify-content-center text-white">No Image</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <h2 style="color: #2c3e50; margin-bottom: 1.5rem;">{{ product.product_name }}</h2>
+                        
+                        <div class="product-info">
+                            <div><strong>Category:</strong> {{ product.category }}</div>
+                            <div><strong>Sub Category:</strong> {{ product.sub_category }}</div>
+                            <div><strong>Quantity:</strong> {{ product.quantity }} {{ product.unit }}</div>
+                            <div><strong>MRP:</strong> ₹{{ product.mrp }}</div>
+                            <div><strong>Selling Price:</strong> <span class="text-success fw-bold fs-4">₹{{ product.selling_price }}</span>
+                                {% if product.discount_percentage > 0 %}
+                                <span class="text-danger">({{ product.discount_percentage }}% OFF)</span>
+                                {% endif %}
+                            </div>
+                            <div><strong>Manufacturer:</strong> {{ product.manufacturer }}</div>
+                            <div>{% if product.stock > 0 %}<span class="text-success fw-bold">In Stock</span>{% else %}<span class="text-danger fw-bold">Out of Stock</span>{% endif %}</div>
+                        </div>
+                        
+                        <div class="mt-4" id="cart-status-{{ product.id }}">
+                            {% if product.stock > 0 %}
+                            <button class="btn btn-add btn-lg" data-product-id="{{ product.id }}" data-product-name="{{ product.product_name }}" data-product-price="{{ product.selling_price }}" data-product-stock="{{ product.stock }}" onclick="addToCart({{ product.id }}, '{{ product.product_name }}', {{ product.selling_price }}, {{ product.stock }})">Add to Cart</button>
+                            {% else %}
+                            <button class="btn btn-secondary btn-lg" disabled>Out of Stock</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if product.description %}
+                <div class="mt-4">
+                    <h4 style="color: #2c3e50;">Description</h4>
+                    <p style="color: #7f8c8d; line-height: 1.8;">{{ product.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="cart-sidebar">
+                <div class="cart-title">Shopping Cart</div>
+                <div id="cartItems"></div>
+                <hr>
+                <h4 id="cartTotal" style="color: #2c3e50; font-weight: bold;">Total: ₹0</h4>
+                <button class="btn btn-checkout w-100 mt-3" onclick="checkout()">Checkout</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function loadCart() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let cartItems = document.getElementById('cartItems');
+    let total = 0;
+    
+    let groupedCart = {};
+    cart.forEach(item => {
+        if (groupedCart[item.id]) {
+            groupedCart[item.id].quantity++;
+        } else {
+            groupedCart[item.id] = {...item, quantity: 1};
+        }
+    });
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<div class="cart-empty">Your cart is empty</div>';
+    } else {
+        cartItems.innerHTML = Object.values(groupedCart).map(item => {
+            let itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            let isMaxReached = item.quantity >= item.stock;
+            return `
+                <div class="cart-item" style="padding: 0.8rem;">
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">${item.name}</div>
+                    <div class="d-flex justify-content-between align-items-center" style="font-size: 0.85rem;">
+                        <span class="text-muted">₹${item.price} x ${item.quantity}</span>
+                        <strong style="color: #27ae60;">₹${itemTotal.toFixed(2)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-danger" onclick="decreaseQuantity(${item.id})">-</button>
+                            <button class="btn btn-outline-secondary" disabled style="min-width: 35px;">${item.quantity}</button>
+                            <button class="btn ${isMaxReached ? 'btn-secondary' : 'btn-outline-success'}" onclick="increaseQuantity(${item.id}, ${item.stock})" ${isMaxReached ? 'disabled' : ''}>+</button>
+                        </div>
+                        <button class="btn btn-sm btn-link text-danger" onclick="removeAllFromCart(${item.id})" style="padding: 0; font-size: 0.8rem;">Remove</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    document.getElementById('cartTotal').textContent = 'Total: ₹' + total.toFixed(2);
+    updateCartButtons();
+}
+
+function updateCartButtons() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let groupedCart = {};
+    cart.forEach(item => {
+        if (groupedCart[item.id]) {
+            groupedCart[item.id].quantity++;
+        } else {
+            groupedCart[item.id] = {...item, quantity: 1};
+        }
+    });
+    
+    document.querySelectorAll('[id^="cart-status-"]').forEach(el => {
+        let productId = parseInt(el.id.replace('cart-status-', ''));
+        let item = groupedCart[productId];
+        
+        let btn = el.querySelector('button[data-product-id]');
+        let btnGroup = el.querySelector('.btn-group');
+        let dataAttrs = {};
+        
+        if (btn) {
+            dataAttrs.id = btn.getAttribute('data-product-id');
+            dataAttrs.name = btn.getAttribute('data-product-name');
+            dataAttrs.price = btn.getAttribute('data-product-price');
+            dataAttrs.stock = btn.getAttribute('data-product-stock');
+        } else if (btnGroup) {
+            dataAttrs.id = btnGroup.getAttribute('data-product-id');
+            dataAttrs.name = btnGroup.getAttribute('data-product-name');
+            dataAttrs.price = btnGroup.getAttribute('data-product-price');
+            dataAttrs.stock = btnGroup.getAttribute('data-product-stock');
+        }
+        
+        if (item && dataAttrs.id) {
+            let isMaxReached = item.quantity >= parseInt(dataAttrs.stock);
+            el.innerHTML = `
+                <div class="btn-group" data-product-id="${dataAttrs.id}" data-product-name="${dataAttrs.name}" data-product-price="${dataAttrs.price}" data-product-stock="${dataAttrs.stock}">
+                    <button class="btn btn-outline-danger" onclick="decreaseQuantity(${productId})">-</button>
+                    <button class="btn btn-light" disabled>${item.quantity}</button>
+                    <button class="btn ${isMaxReached ? 'btn-secondary' : 'btn-outline-success'}" onclick="increaseQuantity(${productId}, ${dataAttrs.stock})" ${isMaxReached ? 'disabled' : ''}>+</button>
+                </div>
+            `;
+        } else if (dataAttrs.id) {
+            el.innerHTML = `<button class="btn btn-add btn-lg" data-product-id="${dataAttrs.id}" data-product-name="${dataAttrs.name}" data-product-price="${dataAttrs.price}" data-product-stock="${dataAttrs.stock}" onclick="addToCart(${dataAttrs.id}, '${dataAttrs.name}', ${dataAttrs.price}, ${dataAttrs.stock})">Add to Cart</button>`;
+        }
+    });
+}
+
+function addToCart(id, name, price, stock) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let count = cart.filter(item => item.id === id).length;
+    
+    if (count >= stock) {
+        alert('Cannot add more. Stock limit reached!');
+        return;
+    }
+    
+    cart.push({id: id, name: name, price: price, stock: stock});
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+}
+
+function increaseQuantity(productId, stock) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let count = cart.filter(item => item.id === productId).length;
+    
+    if (count >= stock) {
+        alert('Cannot add more. Stock limit reached!');
+        return;
+    }
+    
+    let item = cart.find(item => item.id === productId);
+    if (item) {
+        cart.push({...item});
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadCart();
+    }
+}
+
+function decreaseQuantity(productId) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let index = cart.findIndex(item => item.id === productId);
+    if (index !== -1) {
+        cart.splice(index, 1);
+    }
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+}
+
+function removeAllFromCart(productId) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart = cart.filter(item => item.id !== productId);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+}
+
+function checkout() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    window.location.href = '/checkout/';
+}
+
+window.onload = loadCart;
+</script>
+{% endblock %}

@@ -1,0 +1,380 @@
+{% extends 'shop/seller_base.html' %}
+
+{% block content %}
+<style>
+    .config-container { max-width: 1200px; margin: 0 auto; }
+    h2 { color: #2c3e50; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ecf0f1; }
+    .tab { padding: 10px 20px; cursor: pointer; background: #ecf0f1; border: none; border-radius: 4px 4px 0 0; }
+    .tab.active { background: #3498db; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .add-form { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-weight: bold; margin-bottom: 5px; color: #555; }
+    .form-group input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-primary:hover { background: #2980b9; }
+    table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); table-layout: auto; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }
+    th { background: #34495e; color: white; }
+    .btn-edit { background: #f39c12; color: white; padding: 5px 15px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-edit:hover { background: #e67e22; }
+    .messages { padding: 12px; margin-bottom: 20px; border-radius: 4px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .edit-row { display: none; }
+    .edit-row.active { display: table-row; background: #f8f9fa; }
+    .table-wrapper { overflow-x: auto; }
+</style>
+
+<div class="config-container">
+    <h2>Configuration</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="messages">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('categories')">Product Categories</button>
+        <button class="tab" onclick="showTab('gst')">GST Details</button>
+        <button class="tab" onclick="showTab('units')">Units of Measurement</button>
+    </div>
+    
+    <!-- Categories Tab -->
+    <div id="categories" class="tab-content active">
+        <button class="btn btn-primary" onclick="showAddForm('category')" style="margin-bottom: 20px;">Add Category</button>
+        
+        <div class="add-form" id="add-form-category" style="display: none;">
+            <h3>Add New Category</h3>
+            <form method="POST" action="{% url 'add_category' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <input type="text" name="category" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sub Category *</label>
+                        <input type="text" name="sub_category" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HSN Code *</label>
+                        <input type="text" name="hsn" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SGST (%) *</label>
+                        <input type="number" step="0.01" name="sgst" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CGST (%) *</label>
+                        <input type="number" step="0.01" name="cgst" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Category</button>
+                <button type="button" class="btn" onclick="hideAddForm('category')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Sub Category</th>
+                    <th>HSN</th>
+                    <th>SGST (%)</th>
+                    <th>CGST (%)</th>
+                    <th>Total GST (%)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr id="row-{{ cat.id }}">
+                    <td>{{ cat.category }}</td>
+                    <td>{{ cat.sub_category }}</td>
+                    <td>{{ cat.hsn }}</td>
+                    <td>{{ cat.sgst }}</td>
+                    <td>{{ cat.cgst }}</td>
+                    <td>{{ cat.gst }}</td>
+                    <td><button class="btn-edit" onclick="editRow({{ cat.id }}, 'category')">Edit</button></td>
+                </tr>
+                <tr id="edit-{{ cat.id }}" class="edit-row">
+                    <td colspan="7">
+                        <form method="POST" action="{% url 'edit_category' cat.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <input type="text" name="category" value="{{ cat.category }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Sub Category</label>
+                                    <input type="text" name="sub_category" value="{{ cat.sub_category }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>HSN</label>
+                                    <input type="text" name="hsn" value="{{ cat.hsn }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>SGST (%)</label>
+                                    <input type="number" step="0.01" name="sgst" value="{{ cat.sgst }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>CGST (%)</label>
+                                    <input type="number" step="0.01" name="cgst" value="{{ cat.cgst }}" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ cat.id }})">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- GST Details Tab -->
+    <div id="gst" class="tab-content">
+        <button class="btn btn-primary" onclick="showAddForm('gst')" style="margin-bottom: 20px;">Add GST Details</button>
+        
+        <div class="add-form" id="add-form-gst" style="display: none;">
+            <h3>Add GST Details</h3>
+            <form method="POST" action="{% url 'add_gst' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>GST Number *</label>
+                        <input type="text" name="gst_number" maxlength="15" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PAN *</label>
+                        <input type="text" name="pan" maxlength="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Registration Date *</label>
+                        <input type="date" name="reg_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valid Till *</label>
+                        <input type="date" name="valid_till" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Address *</label>
+                        <input type="text" name="address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>City *</label>
+                        <input type="text" name="city" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PIN *</label>
+                        <input type="text" name="pin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Country *</label>
+                        <input type="text" name="country" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add GST Details</button>
+                <button type="button" class="btn" onclick="hideAddForm('gst')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>GST Number</th>
+                    <th>PAN</th>
+                    <th>Reg Date</th>
+                    <th>Valid Till</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>PIN</th>
+                    <th>Country</th>
+                    <th>Created At</th>
+                    <th>Created By</th>
+                    <th>Modified At</th>
+                    <th>Modified By</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gst in gst_details %}
+                <tr id="row-gst-{{ gst.serial_no }}">
+                    <td>{{ gst.gst_number }}</td>
+                    <td>{{ gst.pan }}</td>
+                    <td>{{ gst.reg_date }}</td>
+                    <td>{{ gst.valid_till }}</td>
+                    <td>{{ gst.address }}</td>
+                    <td>{{ gst.city }}</td>
+                    <td>{{ gst.pin }}</td>
+                    <td>{{ gst.country }}</td>
+                    <td>{{ gst.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ gst.created_by|default:"N/A" }}</td>
+                    <td>{{ gst.modified_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ gst.modified_by|default:"N/A" }}</td>
+                    <td>{{ gst.status }}</td>
+                    <td><button class="btn-edit" onclick="editRow({{ gst.serial_no }}, 'gst')">Edit</button></td>
+                </tr>
+                <tr id="edit-gst-{{ gst.serial_no }}" class="edit-row">
+                    <td colspan="14">
+                        <form method="POST" action="{% url 'edit_gst' gst.serial_no %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>GST Number</label>
+                                    <input type="text" name="gst_number" value="{{ gst.gst_number }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>PAN</label>
+                                    <input type="text" name="pan" value="{{ gst.pan }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Registration Date</label>
+                                    <input type="date" name="reg_date" value="{{ gst.reg_date|date:'Y-m-d' }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Valid Till</label>
+                                    <input type="date" name="valid_till" value="{{ gst.valid_till|date:'Y-m-d' }}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <input type="text" name="address" value="{{ gst.address }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>City</label>
+                                    <input type="text" name="city" value="{{ gst.city }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>PIN</label>
+                                    <input type="text" name="pin" value="{{ gst.pin }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Country</label>
+                                    <input type="text" name="country" value="{{ gst.country }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select name="status" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="Active" {% if gst.status == 'Active' %}selected{% endif %}>Active</option>
+                                        <option value="Inactive" {% if gst.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ gst.serial_no }}, 'gst')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Units Tab -->
+    <div id="units" class="tab-content">
+        <button class="btn btn-primary" onclick="showAddForm('unit')" style="margin-bottom: 20px;">Add Unit</button>
+        
+        <div class="add-form" id="add-form-unit" style="display: none;">
+            <h3>Add New Unit</h3>
+            <form method="POST" action="{% url 'add_unit' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Unit Name *</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Abbreviation *</label>
+                        <input type="text" name="abbreviation" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Unit</button>
+                <button type="button" class="btn" onclick="hideAddForm('unit')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Unit Name</th>
+                    <th>Abbreviation</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for unit in units %}
+                <tr id="row-unit-{{ unit.id }}">
+                    <td>{{ unit.name }}</td>
+                    <td>{{ unit.abbreviation }}</td>
+                    <td><button class="btn-edit" onclick="editRow({{ unit.id }}, 'unit')">Edit</button></td>
+                </tr>
+                <tr id="edit-unit-{{ unit.id }}" class="edit-row">
+                    <td colspan="3">
+                        <form method="POST" action="{% url 'edit_unit' unit.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Unit Name</label>
+                                    <input type="text" name="name" value="{{ unit.name }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Abbreviation</label>
+                                    <input type="text" name="abbreviation" value="{{ unit.abbreviation }}" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ unit.id }}, 'unit')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+    }
+    
+    function editRow(id, type) {
+        const prefix = type === 'unit' ? 'unit-' : (type === 'gst' ? 'gst-' : '');
+        document.getElementById('row-' + prefix + id).style.display = 'none';
+        document.getElementById('edit-' + prefix + id).classList.add('active');
+    }
+    
+    function cancelEdit(id, type = 'category') {
+        const prefix = type === 'unit' ? 'unit-' : (type === 'gst' ? 'gst-' : '');
+        document.getElementById('row-' + prefix + id).style.display = 'table-row';
+        document.getElementById('edit-' + prefix + id).classList.remove('active');
+    }
+    
+    function showAddForm(type) {
+        document.getElementById('add-form-' + type).style.display = 'block';
+    }
+    
+    function hideAddForm(type) {
+        document.getElementById('add-form-' + type).style.display = 'none';
+    }
+</script>
+{% endblock %}

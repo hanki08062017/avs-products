@@ -1,0 +1,370 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}My Wallet{% endblock %}
+
+{% block content %}
+<style>
+body { background: #f8f9fa; }
+.wallet-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 2rem; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 1.5rem; }
+.wallet-card.avs { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.balance-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem; }
+.balance-amount { font-size: 2.5rem; font-weight: bold; }
+.table-container { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+.status-successful { background: #27ae60; color: white; }
+.status-pending { background: #f39c12; color: white; }
+.status-processing { background: #3498db; color: white; }
+.status-failed { background: #e74c3c; color: white; }
+.no-transactions { text-align: center; padding: 3rem; color: #7f8c8d; }
+table { width: 100%; border-collapse: collapse; }
+thead { background: #2c3e50; color: white; }
+th { padding: 1rem; text-align: left; font-weight: 600; }
+td { padding: 1rem; border-bottom: 1px solid #e9ecef; }
+tbody tr:hover { background: #f8f9fa; }
+</style>
+
+<div class="container mt-4">
+    <h2 class="mb-4" style="color: #2c3e50; font-weight: bold;">My Wallet</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="wallet-card">
+                <div class="balance-label">Normal Wallet</div>
+                <div class="balance-amount">₹{% if normal_wallet %}{{ normal_wallet.wallet_amount }}{% else %}0.00{% endif %}</div>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-light" onclick="showAddMoneyModal('Other')" style="padding: 0.5rem 1.5rem;">Add Money</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="wallet-card avs">
+                <div class="balance-label">AVS Wallet</div>
+                {% if linked_wallets %}
+                    <table style="width: 100%; margin-top: 1rem; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.3);">
+                                <th style="padding: 0.5rem; text-align: left; color: rgba(255,255,255,0.9);">Customer ID</th>
+                                <th style="padding: 0.5rem; text-align: right; color: rgba(255,255,255,0.9);">Amount</th>
+                                <th style="padding: 0.5rem; text-align: center; color: rgba(255,255,255,0.9);">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for wallet in linked_wallets %}
+                            <tr>
+                                <td style="padding: 0.3rem 0.5rem; color: white;">{{ wallet.customer_id }}</td>
+                                <td style="padding: 0.3rem 0.5rem; text-align: right; color: white;">₹{{ wallet.wallet_amount }}</td>
+                                <td style="padding: 0.3rem 0.5rem; text-align: center;"><button onclick="removeAVSWallet('{{ wallet.wallet_id }}')" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">×</button></td>
+                            </tr>
+                            {% endfor %}
+                            <tr style="border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
+                                <td style="padding: 0.5rem; color: white;">Total</td>
+                                <td style="padding: 0.5rem; text-align: right; color: white; font-size: 1.2rem;">₹{{ avs_total }}</td>
+                                <td style="padding: 0.5rem;"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="balance-amount">₹0.00</div>
+                {% endif %}
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-light" onclick="showAddMoneyModal('AVS')" style="padding: 0.5rem 1.5rem;">Add AVS Wallet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if unlinked_wallets %}
+    <div class="table-container mt-4">
+        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Available AVS Wallets</h5>
+        <table>
+            <thead>
+                <tr>
+                    <th>Wallet ID</th>
+                    <th>Customer Name</th>
+                    <th>Customer ID</th>
+                    <th>Balance</th>
+                    <th>Created</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wallet in unlinked_wallets %}
+                <tr>
+                    <td style="font-weight: 600; color: #2c3e50;">{{ wallet.wallet_id }}</td>
+                    <td>{{ wallet.customer_name }}</td>
+                    <td>{{ wallet.customer_id }}</td>
+                    <td style="font-weight: bold; color: #27ae60;">₹{{ wallet.wallet_amount }}</td>
+                    <td style="color: #7f8c8d;">{{ wallet.created_at|date:"d M Y" }}</td>
+                    <td><button class="btn btn-sm btn-success" onclick="linkWallet('{{ wallet.wallet_id }}')">Link</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    
+    <div class="table-container mt-4">
+        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Wallet Transactions</h5>
+        {% if transactions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Order ID</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for txn in transactions %}
+                <tr>
+                    <td style="font-weight: 600; color: #2c3e50;">{{ txn.transaction_id }}</td>
+                    <td style="font-weight: bold; {% if txn.transaction_type == 'Debit' %}color: #e74c3c;{% else %}color: #27ae60;{% endif %}">
+                        {% if txn.transaction_type == 'Debit' %}-{% else %}+{% endif %}₹{{ txn.amount }}
+                    </td>
+                    <td>{{ txn.transaction_type }}</td>
+                    <td>{{ txn.reference_order.order_id }}</td>
+                    <td><span class="status-badge status-{{ txn.status|lower }}">{{ txn.status }}</span></td>
+                    <td style="color: #7f8c8d;">{{ txn.created_at|date:"d M Y, h:i A" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-transactions">
+            <h4>No transactions yet</h4>
+            <p>Your wallet transactions will appear here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Money Modal -->
+<div id="addMoneyModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 10px; padding: 2rem; max-width: 400px; width: 90%;">
+        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Add Money to <span id="walletTypeName"></span></h5>
+        <div id="customerStep" style="display: none;">
+            <input type="text" id="customer_id" class="form-control" placeholder="Enter Customer ID" style="margin-bottom: 1rem;">
+            <button class="btn btn-primary w-100" onclick="verifyCustomer()">Confirm</button>
+        </div>
+        <div id="amountStep" style="display: none;">
+            <div id="customerInfo" style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem; display: none;">
+                <p style="margin: 0; color: #2c3e50;"><strong>Customer:</strong> <span id="customerName"></span></p>
+                <p style="margin: 0; color: #2c3e50;"><strong>Mobile:</strong> <span id="customerMobile"></span></p>
+            </div>
+            <input type="number" id="amount" class="form-control" placeholder="Enter amount" min="1" style="margin-bottom: 1rem;">
+            <button class="btn btn-primary w-100" onclick="sendOTP()">Send OTP</button>
+        </div>
+        <div id="otpStep" style="display: none;">
+            <p style="color: #7f8c8d; margin-bottom: 1rem;">OTP sent to registered mobile</p>
+            <input type="text" id="otp" class="form-control" placeholder="Enter OTP" maxlength="6" style="margin-bottom: 1rem;">
+            <button class="btn btn-success w-100" onclick="verifyOTP()">Verify OTP</button>
+        </div>
+        <button class="btn btn-secondary w-100 mt-2" onclick="closeModal()">Cancel</button>
+    </div>
+</div>
+
+<script>
+let currentWalletType = '';
+let verifiedCustomer = null;
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showAddMoneyModal(walletType) {
+    currentWalletType = walletType;
+    verifiedCustomer = null;
+    document.getElementById('walletTypeName').textContent = walletType === 'AVS' ? 'AVS Wallet' : 'Normal Wallet';
+    document.getElementById('addMoneyModal').style.display = 'flex';
+    
+    if (walletType === 'AVS') {
+        document.getElementById('customerStep').style.display = 'block';
+        document.getElementById('amountStep').style.display = 'none';
+    } else {
+        document.getElementById('customerStep').style.display = 'none';
+        document.getElementById('amountStep').style.display = 'block';
+        document.getElementById('customerInfo').style.display = 'none';
+    }
+    
+    document.getElementById('otpStep').style.display = 'none';
+    document.getElementById('customer_id').value = '';
+    document.getElementById('amount').value = '';
+    document.getElementById('otp').value = '';
+}
+
+function closeModal() {
+    document.getElementById('addMoneyModal').style.display = 'none';
+}
+
+function verifyCustomer() {
+    const customerId = document.getElementById('customer_id').value;
+    if (!customerId) {
+        alert('Please enter Customer ID');
+        return;
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `action=verify_customer&customer_id=${customerId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            verifiedCustomer = {
+                id: customerId,
+                name: data.name
+            };
+            alert(data.message);
+            document.getElementById('customerStep').style.display = 'none';
+            document.getElementById('otpStep').style.display = 'block';
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+function sendOTP() {
+    const amount = document.getElementById('amount').value;
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+    }
+    
+    let body = `action=send_otp&amount=${amount}&wallet_type=${currentWalletType}`;
+    if (currentWalletType === 'AVS' && verifiedCustomer) {
+        body += `&customer_id=${verifiedCustomer.id}&customer_name=${verifiedCustomer.name}&customer_mobile=${verifiedCustomer.mobile}`;
+        document.getElementById('otpMobile').textContent = verifiedCustomer.mobile;
+    } else {
+        document.getElementById('otpMobile').textContent = 'your registered mobile';
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: body
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById('amountStep').style.display = 'none';
+            document.getElementById('otpStep').style.display = 'block';
+        }
+    });
+}
+
+function verifyOTP() {
+    const otp = document.getElementById('otp').value;
+    if (!otp || otp.length !== 6) {
+        alert('Please enter a valid 6-digit OTP');
+        return;
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `action=verify_otp&otp=${otp}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeModal();
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+function removeAVSWallet(walletId) {
+    if (!confirm('Are you sure you want to remove this AVS wallet?')) {
+        return;
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `action=remove_avs_wallet&wallet_id=${walletId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+function removeWallet(walletId) {
+    if (!confirm('Are you sure you want to remove this wallet?')) {
+        return;
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `action=remove_wallet&wallet_id=${walletId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function linkWallet(walletId) {
+    if (!confirm('Link this wallet to your account?')) {
+        return;
+    }
+    
+    fetch('{% url "wallet" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `action=link_wallet&wallet_id=${walletId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

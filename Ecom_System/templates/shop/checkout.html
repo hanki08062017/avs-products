@@ -1,0 +1,176 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<style>
+body { background: #f8f9fa; }
+.checkout-container { background: white; border-radius: 10px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+.order-item { background: #f8f9fa; padding: 1rem; border: none; border-radius: 8px; margin-bottom: 0.8rem; }
+.order-summary { background: #f8f9fa; border-radius: 8px; padding: 1.5rem; }
+.total-section { background: #2c3e50; color: white; padding: 1.5rem; border-radius: 8px; margin-top: 1rem; }
+</style>
+
+<div class="container">
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary mb-3">← Back to Shop</a>
+    
+    <h2 class="mb-4" style="color: #2c3e50;">Checkout - Order Summary</h2>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="checkout-container">
+                <h4 class="mb-3" style="color: #2c3e50; font-weight: bold; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Order Summary</h4>
+                <div id="orderItems" style="max-height: 350px; overflow-y: auto; margin-bottom: 1rem;"></div>
+                <div class="order-summary mt-3">
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.95rem;">
+                        <span>Total MRP</span>
+                        <span id="totalMRP" style="font-weight: 600;">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.95rem; color: #27ae60;">
+                        <span>Discount on MRP</span>
+                        <span id="totalDiscount" style="font-weight: 600;">-₹0.00</span>
+                    </div>
+                    <hr style="border-top: 1px solid #dee2e6; margin: 0.5rem 0;">
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.95rem;">
+                        <span>Subtotal</span>
+                        <span id="subtotal" style="font-weight: 600;">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.95rem;">
+                        <span>Delivery Charges</span>
+                        <span id="deliveryCharges" style="font-weight: 600;">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size: 0.95rem;">
+                        <span>Shipping Charges</span>
+                        <span id="shippingCharges" style="font-weight: 600;">Free</span>
+                    </div>
+                    <hr style="border-top: 2px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center" style="padding: 0.5rem 0;">
+                        <strong style="font-size: 1.2rem; color: #2c3e50;">Total Amount</strong>
+                        <strong style="font-size: 1.4rem; color: #27ae60;" id="total">₹0.00</strong>
+                    </div>
+                    <div style="background: #d1ecf1; color: #0c5460; padding: 0.8rem; border-radius: 5px; margin-top: 1rem; text-align: center;">
+                        <strong>You will save <span id="totalSavings">₹0.00</span> on this order</strong>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-success w-100 mt-3" style="padding: 1rem; font-size: 1.1rem; font-weight: 600;" onclick="proceedToPlaceOrder()">Place Order</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadOrderSummary() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let orderItems = document.getElementById('orderItems');
+    let subtotal = 0;
+    
+    if (cart.length === 0) {
+        window.location.href = '/';
+        return;
+    }
+    
+    let groupedCart = {};
+    cart.forEach(item => {
+        if (groupedCart[item.id]) {
+            groupedCart[item.id].quantity++;
+        } else {
+            groupedCart[item.id] = {...item, quantity: 1};
+        }
+    });
+    
+    orderItems.innerHTML = Object.values(groupedCart).map(item => {
+        let itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        let isMaxReached = item.quantity >= item.stock;
+        return `
+            <div class="order-item">
+                <div class="d-flex justify-content-between align-items-center" style="margin-bottom: 0.8rem;">
+                    <span style="font-weight: 600; color: #2c3e50; font-size: 0.9rem; flex: 1;">${item.name}</span>
+                    <span class="text-muted" style="font-size: 0.85rem; white-space: nowrap; margin: 0 1rem;">₹${item.price.toFixed(2)} × ${item.quantity}</span>
+                    <span style="font-weight: 600; color: #27ae60; font-size: 0.95rem; white-space: nowrap;">₹${itemTotal.toFixed(2)}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-danger" onclick="decreaseInCheckout(${item.id})">-</button>
+                        <button class="btn btn-light" disabled style="min-width: 50px;">${item.quantity}</button>
+                        <button class="btn ${isMaxReached ? 'btn-secondary' : 'btn-outline-success'}" onclick="increaseInCheckout(${item.id}, ${item.stock})" ${isMaxReached ? 'disabled' : ''}>+</button>
+                    </div>
+                    <button class="btn btn-sm btn-link text-danger" onclick="removeFromCheckout(${item.id})" style="padding: 0; text-decoration: none;">Remove</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Calculate charges
+    let totalMRP = 0;
+    Object.values(groupedCart).forEach(item => {
+        let itemMRP = (item.mrp || item.price) * item.quantity;
+        totalMRP += itemMRP;
+        console.log(`Product: ${item.name}, MRP: ${item.mrp}, Price: ${item.price}, Qty: ${item.quantity}`);
+    });
+    let totalDiscount = totalMRP - subtotal;
+    console.log(`Total MRP: ${totalMRP}, Subtotal: ${subtotal}, Discount: ${totalDiscount}`);
+    let deliveryCharges = subtotal > 500 ? 0 : 50;
+    let shippingCharges = 0;
+    let total = subtotal + deliveryCharges + shippingCharges;
+    let totalSavings = totalDiscount;
+    
+    document.getElementById('totalMRP').textContent = '₹' + totalMRP.toFixed(2);
+    document.getElementById('totalDiscount').textContent = '-₹' + totalDiscount.toFixed(2);
+    document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+    document.getElementById('deliveryCharges').textContent = deliveryCharges > 0 ? '₹' + deliveryCharges.toFixed(2) : 'Free';
+    document.getElementById('shippingCharges').textContent = shippingCharges > 0 ? '₹' + shippingCharges.toFixed(2) : 'Free';
+    document.getElementById('total').textContent = '₹' + total.toFixed(2);
+    document.getElementById('totalSavings').textContent = '₹' + totalSavings.toFixed(2);
+    document.getElementById('totalAmount').value = total.toFixed(2);
+    document.getElementById('cartData').value = JSON.stringify(groupedCart);
+}
+
+function increaseInCheckout(productId, stock) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let count = cart.filter(item => item.id === productId).length;
+    
+    if (count >= stock) {
+        return;
+    }
+    
+    let item = cart.find(item => item.id === productId);
+    if (item) {
+        cart.push({...item});
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadOrderSummary();
+    }
+}
+
+function decreaseInCheckout(productId) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let index = cart.findIndex(item => item.id === productId);
+    if (index !== -1) {
+        cart.splice(index, 1);
+        localStorage.setItem('cart', JSON.stringify(cart));
+        loadOrderSummary();
+    }
+}
+
+function removeFromCheckout(productId) {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart = cart.filter(item => item.id !== productId);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadOrderSummary();
+}
+
+function toggleShippingAddress() {
+    // Not needed anymore
+}
+
+function placeOrder() {
+    alert('Order placement functionality coming soon!');
+}
+
+function proceedToPlaceOrder() {
+    window.location.href = '/place-order/';
+}
+
+window.onload = loadOrderSummary;
+</script>
+{% endblock %}
