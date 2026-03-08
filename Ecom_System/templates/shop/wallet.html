@@ -18,9 +18,9 @@ body { background: #f8f9fa; }
 .no-transactions { text-align: center; padding: 3rem; color: #7f8c8d; }
 table { width: 100%; border-collapse: collapse; }
 thead { background: #2c3e50; color: white; }
-th { padding: 1rem; text-align: left; font-weight: 600; }
-td { padding: 1rem; border-bottom: 1px solid #e9ecef; }
-tbody tr:hover { background: #f8f9fa; }
+th { padding: 0.5rem; text-align: center; font-weight: 600; }
+td { padding: 0.5rem; border-bottom: 2px solid #e9ecef;}
+tbody tr:hover { background: #a0caf4; }
 </style>
 
 <div class="container mt-4">
@@ -104,34 +104,42 @@ tbody tr:hover { background: #f8f9fa; }
     {% endif %}
     
     <div class="table-container mt-4">
-        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Wallet Transactions</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 style="color: #2c3e50; font-weight: bold; margin: 0;">Wallet Transactions</h5>
+            <input type="text" id="avsSearch" class="form-control" placeholder="Search by AVS ID" style="max-width: 250px;" onkeyup="filterTransactions()">
+        </div>
         {% if transactions %}
-        <table>
+        <table id="transactionsTable">
             <thead>
                 <tr>
                     <th>Transaction ID</th>
                     <th>Amount</th>
                     <th>Type</th>
                     <th>Order ID</th>
+                    <th>AVS ID</th>
                     <th>Status</th>
                     <th>Date</th>
                 </tr>
             </thead>
             <tbody>
                 {% for txn in transactions %}
-                <tr>
+                <tr data-avs-id="{% if txn.avs_wallet_id %}{% for wallet in linked_wallets %}{% if wallet.wallet_id == txn.avs_wallet_id %}{{ wallet.customer_id }}{% endif %}{% endfor %}{% endif %}">
                     <td style="font-weight: 600; color: #2c3e50;">{{ txn.transaction_id }}</td>
                     <td style="font-weight: bold; {% if txn.transaction_type == 'Debit' %}color: #e74c3c;{% else %}color: #27ae60;{% endif %}">
                         {% if txn.transaction_type == 'Debit' %}-{% else %}+{% endif %}₹{{ txn.amount }}
                     </td>
                     <td>{{ txn.transaction_type }}</td>
                     <td>{{ txn.reference_order.order_id }}</td>
+                    <td>{% if txn.avs_wallet_id %}{% for wallet in linked_wallets %}{% if wallet.wallet_id == txn.avs_wallet_id %}<span style="background: #f093fb; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ wallet.customer_id }}</span>{% endif %}{% endfor %}{% else %}-{% endif %}</td>
                     <td><span class="status-badge status-{{ txn.status|lower }}">{{ txn.status }}</span></td>
                     <td style="color: #7f8c8d;">{{ txn.created_at|date:"d M Y, h:i A" }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <div id="noResults" style="display: none; text-align: center; padding: 2rem; color: #7f8c8d;">
+            <p>No transactions found for the searched AVS ID.</p>
+        </div>
         {% else %}
         <div class="no-transactions">
             <h4>No transactions yet</h4>
@@ -365,6 +373,32 @@ function linkWallet(walletId) {
             location.reload();
         }
     });
+}
+
+function filterTransactions() {
+    const searchValue = document.getElementById('avsSearch').value.toLowerCase();
+    const table = document.getElementById('transactionsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    let visibleCount = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+        const avsId = rows[i].getAttribute('data-avs-id').toLowerCase();
+        if (avsId.includes(searchValue)) {
+            rows[i].style.display = '';
+            visibleCount++;
+        } else {
+            rows[i].style.display = 'none';
+        }
+    }
+    
+    // Show/hide no results message
+    if (visibleCount === 0 && searchValue !== '') {
+        table.style.display = 'none';
+        document.getElementById('noResults').style.display = 'block';
+    } else {
+        table.style.display = 'table';
+        document.getElementById('noResults').style.display = 'none';
+    }
 }
 </script>
 {% endblock %}

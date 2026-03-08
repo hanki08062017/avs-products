@@ -12,19 +12,48 @@
     .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3498db; }
     .stat-card h4 { font-size: 2rem; margin-bottom: 0.5rem; color: #2c3e50; }
     .stat-card p { color: #7f8c8d; }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-    table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid #ecf0f1; }
-    table th { background: #f8f9fa; color: #2c3e50; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; white-space: nowrap; }
+    table th, table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }
+    table th { background: #34495e; color: white; font-weight: 600; }
+    table tbody tr { transition: background-color 0.2s; }
+    table tbody tr:hover { background-color: #f0f8ff; cursor: pointer; }
+    #activeOrdersTable tbody tr:hover { background-color: #e8f5e9; }
     .btn { background: #3498db; color: white; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; display: inline-block; border: none; cursor: pointer; }
     .btn:hover { background: #2980b9; }
+    .filter-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; }
+    .filter-bar select { padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+    .order-section { margin-bottom: 3rem; }
+    .table-container { overflow-x: auto; }
+    .status-badge { padding: 0.4rem 0.8rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem; display: inline-block; }
+    .status-placed { background: #fff3cd; color: #856404; }
+    .status-confirmed { background: #d1ecf1; color: #0c5460; }
+    .status-processing { background: #cce5ff; color: #004085; }
+    .status-shipped { background: #d4edda; color: #155724; }
+    .sortable { cursor: pointer; user-select: none; }
+    .sortable:hover { background: #2c3e50; }
+    .sort-arrow { margin-left: 0.3rem; font-size: 0.7rem; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+    .pagination a, .pagination span { padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #3498db; }
+    .pagination .current { background: #3498db; color: white; border-color: #3498db; }
 </style>
 
 <div class="tabs">
     <button class="tab active" onclick="openTab(event, 'dashboard')">📊 Dashboard</button>
+    {% if is_admin or privileges.manage_orders %}
     <button class="tab" onclick="openTab(event, 'orders')">🛒 Manage Orders</button>
+    {% endif %}
+    {% if is_admin or privileges.manage_products %}
     <button class="tab" onclick="openTab(event, 'products')">📦 Manage Products</button>
+    {% endif %}
+    {% if is_admin %}
     <button class="tab" onclick="openTab(event, 'staff')">👥 Manage Staff</button>
+    {% endif %}
+    {% if is_admin or privileges.manage_payments %}
+    <button class="tab" onclick="openTab(event, 'payments')">💳 Manage Payments</button>
+    {% endif %}
+    {% if is_admin or privileges.manage_reports %}
     <button class="tab" onclick="openTab(event, 'reports')">📈 Reports</button>
+    {% endif %}
 </div>
 
 <div id="dashboard" class="tab-content active">
@@ -76,31 +105,398 @@
 
 <div id="orders" class="tab-content">
     <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Orders</h2>
-    <button class="btn" style="margin-bottom: 1rem;">View All Orders</button>
-    <table>
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td colspan="6" style="text-align: center; color: #7f8c8d;">No orders available</td></tr>
-        </tbody>
-    </table>
+    
+    <div class="filter-bar">
+        <label style="font-weight: 600; color: #2c3e50;">View:</label>
+        <label style="margin-right: 1rem;">
+            <input type="radio" name="viewType" value="active" checked onchange="changeView()"> Active Orders
+        </label>
+        <label style="margin-right: 2rem;">
+            <input type="radio" name="viewType" value="completed" onchange="changeView()"> Completed Orders
+        </label>
+        
+        <span id="periodFilterContainer" style="display: none;">
+            <label style="font-weight: 600; color: #2c3e50;">Period:</label>
+            <select id="periodFilter" onchange="filterByPeriod()" style="margin-right: 2rem;">
+                <option value="7">Last 1 Week</option>
+                <option value="30">Last 1 Month</option>
+                <option value="90">Last 3 Months</option>
+            </select>
+        </span>
+        
+        <label style="font-weight: 600; color: #2c3e50;">Filter by Status:</label>
+        <select id="statusFilter" onchange="filterOrders()">
+            <option value="all">All</option>
+        </select>
+    </div>
+
+    <div class="order-section" id="activeOrdersSection" style="display: block;">
+        <h3 style="margin-bottom: 1rem; color: #2c3e50;">Active Orders ({{ total_count }})</h3>
+        <div class="table-container">
+            <table id="activeOrdersTable">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th class="sortable" onclick="sortTable('order_id')">Order ID <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('customer_name')">Customer <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('total_amount')">Amount <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('payment_status')">Payment Status <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('payment_method')">Payment Mode <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('created_at')">Date <span class="sort-arrow">↕</span></th>
+                    <th>Order Status</th>
+                    <th class="sortable" onclick="sortTable('status_at')">Status At <span class="sort-arrow">↕</span></th>
+                    <th class="sortable" onclick="sortTable('status_by')">Status By <span class="sort-arrow">↕</span></th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr data-status="{{ order.order_status }}">
+                    <td>{{ orders.start_index|add:forloop.counter0 }}</td>
+                    <td>{{ order.order_id }}</td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>₹{{ order.total_amount }}</td>
+                    <td>{{ order.payment_status }}</td>
+                    <td>{{ order.payment_method }}</td>
+                    <td>{{ order.created_at|date:"d M Y" }}</td>
+                    <td>
+                        <select data-order-id="{{ order.order_id }}" data-original="{{ order.order_status }}" onchange="updateOrderStatus(this)" class="status-badge {% if order.order_status == 'Placed' %}status-placed{% elif order.order_status == 'Confirmed' %}status-confirmed{% elif order.order_status == 'Processing' %}status-processing{% elif order.order_status == 'Shipped' %}status-shipped{% endif %}" style="border: 1px solid #ddd;">
+                            <option value="{{ order.order_status }}" selected>{{ order.order_status }}</option>
+                            {% if order.order_status == 'Placed' %}
+                            <option value="Confirmed">Confirmed</option>
+                            {% elif order.order_status == 'Confirmed' %}
+                            <option value="Processing">Processing</option>
+                            {% elif order.order_status == 'Processing' %}
+                            <option value="Shipped">Shipped</option>
+                            {% elif order.order_status == 'Shipped' %}
+                            <option value="Delivered">Delivered</option>
+                            {% endif %}
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </td>
+                    <td>
+                        {% if order.order_status == 'Placed' and order.placed_at %}
+                            {{ order.placed_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Confirmed' and order.confirmed_at %}
+                            {{ order.confirmed_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Processing' and order.processing_at %}
+                            {{ order.processing_at|date:"d M Y, h:i A" }}
+                        {% elif order.order_status == 'Shipped' and order.shipped_at %}
+                            {{ order.shipped_at|date:"d M Y, h:i A" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.order_status == 'Placed' %}
+                            {{ order.placed_by|default:"-" }}
+                        {% elif order.order_status == 'Confirmed' %}
+                            {{ order.confirmed_by|default:"-" }}
+                        {% elif order.order_status == 'Processing' %}
+                            {{ order.processing_by|default:"-" }}
+                        {% elif order.order_status == 'Shipped' %}
+                            {{ order.shipped_by|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button onclick="viewOrderDetails('{{ order.order_id }}')" class="btn" style="padding: 0.5rem 1rem;">View Details</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        
+        {% if orders.has_other_pages %}
+        <div class="pagination">
+            {% if orders.has_previous %}
+                <a href="?view=active&sort={{ request.GET.sort }}&order={{ request.GET.order }}&page=1#orders">First</a>
+                <a href="?view=active&sort={{ request.GET.sort }}&order={{ request.GET.order }}&page={{ orders.previous_page_number }}#orders">Previous</a>
+            {% endif %}
+            
+            <span class="current">Page {{ orders.number }} of {{ orders.paginator.num_pages }}</span>
+            
+            {% if orders.has_next %}
+                <a href="?view=active&sort={{ request.GET.sort }}&order={{ request.GET.order }}&page={{ orders.next_page_number }}#orders">Next</a>
+                <a href="?view=active&sort={{ request.GET.sort }}&order={{ request.GET.order }}&page={{ orders.paginator.num_pages }}#orders">Last</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="order-section" id="completedOrdersSection" style="display: none;">
+        <h3 style="margin-bottom: 1rem; color: #2c3e50;">Completed Orders ({{ total_count }})</h3>
+        <div style="overflow-x: auto;">
+            <table id="completedOrdersTable" style="white-space: nowrap;">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Payment Status</th>
+                        <th>Payment Mode</th>
+                        <th>Current Status</th>
+                        <th>Placed At</th>
+                        <th>Placed By</th>
+                        <th>Confirmed At</th>
+                        <th>Confirmed By</th>
+                        <th>Processing At</th>
+                        <th>Processing By</th>
+                        <th>Shipped At</th>
+                        <th>Shipped By</th>
+                        <th>Delivered At</th>
+                        <th>Delivered By</th>
+                        <th>Cancelled At</th>
+                        <th>Cancelled By</th>
+                        <th>Comments</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr data-status="{{ order.order_status }}" data-date="{{ order.delivered_at|default:order.cancelled_at|date:'Y-m-d' }}">
+                        <td>{{ orders.start_index|add:forloop.counter0 }}</td>
+                        <td>{{ order.order_id }}</td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>₹{{ order.total_amount }}</td>
+                        <td>{{ order.payment_status }}</td>
+                        <td>{{ order.payment_method }}</td>
+                        <td><span style="padding: 0.5rem 1rem; background: {% if order.order_status == 'Delivered' %}#27ae60{% else %}#e74c3c{% endif %}; color: white; border-radius: 4px; font-weight: 600;">{{ order.order_status }}</span></td>
+                        <td>{{ order.placed_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.placed_by|default:"-" }}</td>
+                        <td>{{ order.confirmed_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.confirmed_by|default:"-" }}</td>
+                        <td>{{ order.processing_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.processing_by|default:"-" }}</td>
+                        <td>{{ order.shipped_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.shipped_by|default:"-" }}</td>
+                        <td>{{ order.delivered_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.delivered_by|default:"-" }}</td>
+                        <td>{{ order.cancelled_at|date:"d M Y, h:i A"|default:"-" }}</td>
+                        <td>{{ order.cancelled_by|default:"-" }}</td>
+                        <td>{{ order.comments|default:"-"|truncatewords:5 }}</td>
+                        <td>
+                            <button onclick="viewOrderDetails('{{ order.order_id }}')" class="btn" style="padding: 0.5rem 1rem;">View Details</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if orders.has_other_pages %}
+        <div class="pagination">
+            {% if orders.has_previous %}
+                <a href="?view=completed&sort={{ request.GET.sort }}&order={{ request.GET.order }}&period={{ request.GET.period }}&page=1#orders">First</a>
+                <a href="?view=completed&sort={{ request.GET.sort }}&order={{ request.GET.order }}&period={{ request.GET.period }}&page={{ orders.previous_page_number }}#orders">Previous</a>
+            {% endif %}
+            
+            <span class="current">Page {{ orders.number }} of {{ orders.paginator.num_pages }}</span>
+            
+            {% if orders.has_next %}
+                <a href="?view=completed&sort={{ request.GET.sort }}&order={{ request.GET.order }}&period={{ request.GET.period }}&page={{ orders.next_page_number }}#orders">Next</a>
+                <a href="?view=completed&sort={{ request.GET.sort }}&order={{ request.GET.order }}&period={{ request.GET.period }}&page={{ orders.paginator.num_pages }}#orders">Last</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
 </div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateOrderStatus(selectElement) {
+    const orderId = selectElement.getAttribute('data-order-id');
+    const newStatus = selectElement.value;
+    const originalStatus = selectElement.getAttribute('data-original');
+    
+    if (newStatus === originalStatus) {
+        return;
+    }
+    
+    if (confirm('Are you sure you want to change the order status to ' + newStatus + '?')) {
+        const csrftoken = getCookie('csrftoken');
+        
+        fetch('/seller/update-order-status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: 'order_id=' + orderId + '&status=' + newStatus
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Order status updated successfully');
+                window.location.href = window.location.pathname + '#orders';
+                location.reload();
+            } else {
+                alert('Failed to update order status: ' + (data.message || 'Unknown error'));
+                selectElement.value = originalStatus;
+            }
+        })
+        .catch(error => {
+            alert('Error updating order status: ' + error);
+            selectElement.value = originalStatus;
+        });
+    } else {
+        selectElement.value = originalStatus;
+    }
+}
+
+function viewOrderDetails(orderId) {
+    const view = document.querySelector('input[name="viewType"]:checked').value;
+    const status = document.getElementById('statusFilter').value;
+    const period = view === 'completed' ? document.getElementById('periodFilter').value : '';
+    const params = new URLSearchParams({ view, status, period }).toString();
+    sessionStorage.setItem('orderFilters', params);
+    window.location.href = '/seller/order-details/' + orderId + '/';
+}
+
+function changeView() {
+    const view = document.querySelector('input[name="viewType"]:checked').value;
+    window.location.href = '?view=' + view + '#orders';
+}
+
+function filterByPeriod() {
+    const period = document.getElementById('periodFilter').value;
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('period', period);
+    urlParams.set('page', '1');
+    window.location.href = '?' + urlParams.toString() + '#orders';
+}
+
+function filterOrders() {
+    const view = document.querySelector('input[name="viewType"]:checked').value;
+    const filterValue = document.getElementById('statusFilter').value;
+    
+    if (view === 'active') {
+        const rows = document.querySelectorAll('#activeOrdersTable tbody tr');
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status');
+            row.style.display = (filterValue === 'all' || status === filterValue) ? '' : 'none';
+        });
+    } else {
+        const rows = document.querySelectorAll('#completedOrdersTable tbody tr');
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status');
+            const periodVisible = row.getAttribute('data-period-visible') === 'true';
+            const statusMatch = filterValue === 'all' || status === filterValue;
+            row.style.display = (periodVisible && statusMatch) ? '' : 'none';
+        });
+    }
+}
+
+function restoreFilters() {
+    const params = new URLSearchParams(sessionStorage.getItem('orderFilters') || '');
+    const view = params.get('view') || 'active';
+    const status = params.get('status') || 'all';
+    const period = params.get('period') || '7';
+    
+    document.querySelector(`input[name="viewType"][value="${view}"]`).checked = true;
+    
+    if (view === 'completed') {
+        document.getElementById('periodFilter').value = period;
+        const activeSection = document.getElementById('activeOrdersSection');
+        const completedSection = document.getElementById('completedOrdersSection');
+        const statusFilter = document.getElementById('statusFilter');
+        const periodContainer = document.getElementById('periodFilterContainer');
+        
+        activeSection.style.display = 'none';
+        completedSection.style.display = 'block';
+        periodContainer.style.display = 'inline';
+        statusFilter.innerHTML = '<option value="all">All</option><option value="Delivered">Delivered</option><option value="Cancelled">Cancelled</option>';
+        statusFilter.value = status;
+        filterByPeriod();
+    } else {
+        const activeSection = document.getElementById('activeOrdersSection');
+        const completedSection = document.getElementById('completedOrdersSection');
+        const statusFilter = document.getElementById('statusFilter');
+        const periodContainer = document.getElementById('periodFilterContainer');
+        
+        activeSection.style.display = 'block';
+        completedSection.style.display = 'none';
+        periodContainer.style.display = 'none';
+        statusFilter.innerHTML = '<option value="all">All</option><option value="Placed">Placed</option><option value="Confirmed">Confirmed</option><option value="Processing">Processing</option><option value="Shipped">Shipped</option>';
+        statusFilter.value = status;
+        filterOrders();
+    }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const view = urlParams.get('view') || 'active';
+    const period = urlParams.get('period') || '7';
+    
+    document.querySelector(`input[name="viewType"][value="${view}"]`).checked = true;
+    
+    const activeSection = document.getElementById('activeOrdersSection');
+    const completedSection = document.getElementById('completedOrdersSection');
+    const statusFilter = document.getElementById('statusFilter');
+    const periodContainer = document.getElementById('periodFilterContainer');
+    const periodFilter = document.getElementById('periodFilter');
+    
+    if (view === 'completed') {
+        activeSection.style.display = 'none';
+        completedSection.style.display = 'block';
+        periodContainer.style.display = 'inline';
+        periodFilter.value = period;
+        statusFilter.innerHTML = '<option value="all">All</option><option value="Delivered">Delivered</option><option value="Cancelled">Cancelled</option>';
+        filterByPeriod();
+    } else {
+        activeSection.style.display = 'block';
+        completedSection.style.display = 'none';
+        periodContainer.style.display = 'none';
+        statusFilter.innerHTML = '<option value="all">All</option><option value="Placed">Placed</option><option value="Confirmed">Confirmed</option><option value="Processing">Processing</option><option value="Shipped">Shipped</option>';
+    }
+});
+
+let sortDirection = {};
+function sortTable(field) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSort = urlParams.get('sort');
+    const currentOrder = urlParams.get('order') || 'asc';
+    
+    let newOrder = 'asc';
+    if (currentSort === field) {
+        newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    }
+    
+    urlParams.set('sort', field);
+    urlParams.set('order', newOrder);
+    urlParams.set('page', '1');
+    window.location.href = '?' + urlParams.toString() + '#orders';
+}
+</script>
 
 <div id="products" class="tab-content">
     <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Products</h2>
-    <a href="{% url 'add_product' %}" class="btn" style="margin-bottom: 1rem;">Add New Product</a>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <a href="{% url 'add_product' %}" class="btn">Add New Product</a>
+        <input type="text" id="productSearch" placeholder="Search products..." onkeyup="searchProducts()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 4px; width: 300px;">
+    </div>
     <div style="overflow-x: auto;">
-        <table style="white-space: nowrap;">
+        <table id="productsTable" style="white-space: nowrap;">
             <thead>
                 <tr>
+                    <th>S.No</th>
                     <th>Product Name</th>
                     <th>Category</th>
                     <th>Sub Category</th>
@@ -123,6 +519,7 @@
             <tbody>
                 {% for product in products %}
                 <tr>
+                    <td>{{ forloop.counter }}</td>
                     <td>{{ product.product_name }}</td>
                     <td>{{ product.category }}</td>
                     <td>{{ product.sub_category|default:"-" }}</td>
@@ -138,8 +535,8 @@
                     <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
                     <td>{{ product.modified_by|default:"-" }}</td>
                     <td>{{ product.modified_at|date:"Y-m-d H:i" }}</td>
-                    <td>{{ product.status }}</td>
-                    <td><a href="{% url 'edit_product' product.id %}" class="btn">Edit</a></td>
+                    <td><span style="{% if product.status == 'Inactive' %}color: gray; font-weight: bold;{% elif product.stock == 0 %}color: red; font-weight: bold;{% elif product.stock < 5 %}color: orange; font-weight: bold;{% else %}color: #27ae60; font-weight: bold;{% endif %}">{{ product.status }}</span></td>
+                    <td><a href="{% url 'view_product' product.id %}" class="btn">View</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -147,22 +544,119 @@
     </div>
 </div>
 
+<script>
+function searchProducts() {
+    const input = document.getElementById('productSearch');
+    const filter = input.value.toUpperCase();
+    const table = document.getElementById('productsTable');
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 1; j < cells.length; j++) {
+            if (cells[j]) {
+                const txtValue = cells[j].textContent || cells[j].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        rows[i].style.display = found ? '' : 'none';
+    }
+}
+</script>
+
 <div id="staff" class="tab-content">
     <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Staff</h2>
-    <button class="btn" style="margin-bottom: 1rem;">Add New Staff</button>
+    <a href="{% url 'add_staff' %}" class="btn" style="margin-bottom: 1rem;">Add New Staff</a>
     <table>
         <thead>
             <tr>
                 <th>Staff ID</th>
                 <th>Name</th>
-                <th>Role</th>
+                <th>Phone</th>
                 <th>Email</th>
+                <th>Role</th>
                 <th>Status</th>
+                <th>Privileges</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            <tr><td colspan="6" style="text-align: center; color: #7f8c8d;">No staff data available</td></tr>
+            {% if staff_list %}
+                {% for staff in staff_list %}
+                <tr>
+                    <td>{{ staff.staff_id }}</td>
+                    <td>{{ staff.full_name }}</td>
+                    <td>{{ staff.phone }}</td>
+                    <td>{{ staff.email }}</td>
+                    <td>{{ staff.staff_role }}</td>
+                    <td>{{ staff.status }}</td>
+                    <td style="font-size: 0.85rem;">
+                        {% if staff.staff_role == 'Seller-Admin' or staff.staff_role == 'Shop-Admin' %}
+                            <span style="background: #3498db; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: bold;">All</span>
+                        {% elif staff.privileges %}
+                            {% if staff.privileges.manage_orders %}<span style="background: #d5f4e6; color: #27ae60; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.1rem; display: inline-block;">Orders</span>{% endif %}
+                            {% if staff.privileges.manage_products %}<span style="background: #d5f4e6; color: #27ae60; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.1rem; display: inline-block;">Products</span>{% endif %}
+                            {% if staff.privileges.manage_reports %}<span style="background: #d5f4e6; color: #27ae60; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.1rem; display: inline-block;">Reports</span>{% endif %}
+                            {% if staff.privileges.manage_payments %}<span style="background: #d5f4e6; color: #27ae60; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.1rem; display: inline-block;">Payments</span>{% endif %}
+                        {% else %}
+                            <span style="color: #7f8c8d;">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'view_staff' staff.staff_id %}" class="btn" style="background: #27ae60; padding: 0.4rem 0.8rem; margin-right: 0.5rem;">View</a>
+                        {% if staff.status != 'Inactive' %}
+                        <a href="{% url 'edit_staff' staff.staff_id %}" class="btn" style="padding: 0.4rem 0.8rem;">Edit</a>
+                        {% else %}
+                        <span class="btn" style="background: #95a5a6; padding: 0.4rem 0.8rem; cursor: not-allowed;">Edit</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="7" style="text-align: center; color: #7f8c8d;">No staff members found</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<div id="payments" class="tab-content">
+    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Manage Payments</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Transaction ID</th>
+                <th>Order ID</th>
+                <th>Amount</th>
+                <th>Payment Mode</th>
+                <th>Transaction Type</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Created By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if payments %}
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.transaction_id }}</td>
+                    <td>{{ payment.reference_order.order_id }}</td>
+                    <td>₹{{ payment.amount }}</td>
+                    <td>{{ payment.payment_mode }}</td>
+                    <td>{{ payment.transaction_type }}</td>
+                    <td>{{ payment.status }}</td>
+                    <td>{{ payment.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ payment.created_by }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td colspan="8" style="text-align: center; color: #7f8c8d;">No payments available</td></tr>
+            {% endif %}
         </tbody>
     </table>
 </div>
@@ -206,6 +700,20 @@ function openTab(evt, tabName) {
     }
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
+    
+    // Update URL hash
+    window.location.hash = tabName;
 }
+
+// Check if URL has hash and open corresponding tab
+window.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+        const tabButton = document.querySelector(`button[onclick*="'${hash}'"]`);
+        if (tabButton) {
+            tabButton.click();
+        }
+    }
+});
 </script>
 {% endblock %}

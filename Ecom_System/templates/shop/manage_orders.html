@@ -19,6 +19,7 @@
 <div class="orders-container">
     <a href="{% url 'seller_dashboard' %}" class="btn-back">Back to Dashboard</a>
     <h2>Manage Orders</h2>
+    <p style="color: #7f8c8d; margin-bottom: 1rem;">Business Code: {{ business_code }} | Total Orders: {{ orders|length }}</p>
     
     <table>
         <thead>

@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #ecf0f1; }
-        nav { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        nav { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
         nav h1 { font-size: 1.5rem; }
         nav ul { list-style: none; display: flex; gap: 2rem; align-items: center; }
         nav a { color: white; text-decoration: none; }
@@ -34,12 +34,6 @@
             <h1>AVS Products Seller</h1>
             <ul style="margin: 0;">
                 <li><a href="{% url 'seller_dashboard' %}">Dashboard</a></li>
-                <li class="menu-item">
-                    <a href="#">Manage Products</a>
-                    <div class="submenu">
-                        <a href="{% url 'add_product' %}">Add Product</a>
-                    </div>
-                </li>
                 <li><a href="{% url 'config' %}">Config</a></li>
                 <li><a href="#">Contact Us</a></li>
             </ul>

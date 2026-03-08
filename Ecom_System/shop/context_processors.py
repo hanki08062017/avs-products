@@ -7,11 +7,13 @@ def staff_info(request):
         try:
             user = StaffUser.objects.get(username=username)
             staff = Staff.objects.get(username=user, business_code=business_code)
+            is_admin = staff.staff_role in ['Seller-Admin', 'Shop-Admin']
             return {
                 'staff_info': {
                     'name': staff.full_name,
                     'staff_id': staff.staff_id,
-                    'role': staff.staff_role
+                    'role': staff.staff_role,
+                    'is_admin': is_admin
                 }
             }
         except (StaffUser.DoesNotExist, Staff.DoesNotExist):

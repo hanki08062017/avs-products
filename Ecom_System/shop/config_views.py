@@ -11,6 +11,7 @@ def config_view(request):
     
     staff_user = StaffUser.objects.get(username=username)
     staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    is_admin = staff.staff_role in ['Seller-Admin', 'Shop-Admin']
     
     categories = ProductCategory.objects.all()
     units = UnitOfMeasurement.objects.all()
@@ -21,10 +22,24 @@ def config_view(request):
         'units': units,
         'gst_details': gst_details,
         'business_code': business_code,
+        'is_admin': is_admin,
         'staff_info': {'name': staff.full_name, 'staff_id': staff.staff_id}
     })
 
 def add_category(request):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to add categories.')
+        return redirect('config')
+    
     if request.method == 'POST':
         ProductCategory.objects.create(
             category=request.POST.get('category'),
@@ -38,6 +53,19 @@ def add_category(request):
     return redirect('config')
 
 def edit_category(request, id):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to edit categories.')
+        return redirect('config')
+    
     if request.method == 'POST':
         category = ProductCategory.objects.get(id=id)
         category.category = request.POST.get('category')
@@ -51,6 +79,19 @@ def edit_category(request, id):
     return redirect('config')
 
 def add_unit(request):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to add units.')
+        return redirect('config')
+    
     if request.method == 'POST':
         UnitOfMeasurement.objects.create(
             name=request.POST.get('name'),
@@ -61,6 +102,19 @@ def add_unit(request):
     return redirect('config')
 
 def edit_unit(request, id):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to edit units.')
+        return redirect('config')
+    
     if request.method == 'POST':
         unit = UnitOfMeasurement.objects.get(id=id)
         unit.name = request.POST.get('name')
@@ -71,12 +125,20 @@ def edit_unit(request, id):
     return redirect('config')
 
 def add_gst(request):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to add GST details.')
+        return redirect('config')
+    
     if request.method == 'POST':
-        business_code = request.session.get('business_code')
-        username = request.session.get('user_id')
-        
-        staff_user = StaffUser.objects.get(username=username)
-        staff = Staff.objects.get(username=staff_user, business_code=business_code)
         created_by = staff.full_name
         
         GSTDetail.objects.create(
@@ -95,12 +157,20 @@ def add_gst(request):
     return redirect('config')
 
 def edit_gst(request, id):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    
+    # Check if user is admin
+    business_code = request.session.get('business_code')
+    username = request.session.get('user_id')
+    staff_user = StaffUser.objects.get(username=username)
+    staff = Staff.objects.get(username=staff_user, business_code=business_code)
+    
+    if staff.staff_role not in ['Seller-Admin', 'Shop-Admin']:
+        messages.error(request, 'You do not have permission to edit GST details.')
+        return redirect('config')
+    
     if request.method == 'POST':
-        business_code = request.session.get('business_code')
-        username = request.session.get('user_id')
-        
-        staff_user = StaffUser.objects.get(username=username)
-        staff = Staff.objects.get(username=staff_user, business_code=business_code)
         modified_by = staff.full_name
         
         gst = GSTDetail.objects.get(serial_no=id)

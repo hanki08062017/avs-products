@@ -5,9 +5,12 @@
 {% block content %}
 <style>
 body { background: #f8f9fa; }
-.order-card { background: white; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); min-height: 200px; }
+.order-card { background: white; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.order-card.compact { padding: 0; margin-bottom: 0.5rem; }
 .order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 1rem; margin-bottom: 1rem; cursor: pointer; transition: background 0.2s; }
+.compact .order-header { border-bottom: none; margin-bottom: 0; padding: 1rem; }
 .order-header:hover { background: #f8f9fa; border-radius: 5px; padding: 1rem; margin: -1rem; margin-bottom: 1rem; }
+.compact .order-header:hover { margin: 0; }
 .order-id { font-size: 1.1rem; font-weight: bold; color: #2c3e50; }
 .order-date { color: #7f8c8d; font-size: 0.9rem; }
 .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
@@ -49,6 +52,7 @@ body { background: #f8f9fa; }
 .modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; color: #7f8c8d; }
 .modal-close:hover { color: #2c3e50; }
 .tracking-horizontal { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; margin: 1rem 0; position: relative; }
+.tracking-horizontal.hidden { display: none; margin: 0; padding: 0; }
 .h-step { display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; position: relative; }
 .h-step:not(:last-child):after { content: ''; position: absolute; top: 7.5px; left: 50%; width: 100%; height: 3px; background: #ddd; z-index: 0; }
 .h-step.completed:not(:last-child):after { background: #27ae60; }
@@ -63,7 +67,7 @@ body { background: #f8f9fa; }
     
     {% if orders %}
         {% for order in orders %}
-        <div class="order-card">
+        <div class="order-card{% if order.order_status == 'Delivered' or order.order_status == 'Cancelled' %} compact{% endif %}">
             <div class="order-header" onclick="showOrderDetailsModal('{{ order.order_id }}')" style="cursor: pointer;">
                 <div>
                     <div class="order-id" style="color: #2c3e50;">{{ order.order_id }}</div>
@@ -82,7 +86,7 @@ body { background: #f8f9fa; }
                     <div class="detail-value">{{ order.payment_status }}</div>
                 </div>
                 <div style="text-align: right;">
-                    <span class="status-badge status-{% if order.payment_status == 'Pending' %}pending{% else %}{{ order.order_status|lower }}{% endif %}">{% if order.payment_status == 'Pending' %}Pending{% else %}{{ order.order_status }}{% endif %}</span>
+                    <span class="status-badge status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
                     <div class="order-date" style="margin-top: 0.3rem;">
                         {% if order.order_status == 'Placed' and order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}
                         {% elif order.order_status == 'Confirmed' and order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}
@@ -127,7 +131,7 @@ body { background: #f8f9fa; }
                 </div>
             </div>
             {% endif %}
-            </div>
+        </div>
 
         {% endfor %}
     {% else %}
@@ -183,11 +187,13 @@ const orderPaymentData = {
 const trackingData = {
     {% for order in orders %}
     '{{ order.order_id }}': {
+        order_status: '{{ order.order_status }}',
         placed_at: '{% if order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}{% endif %}',
         confirmed_at: '{% if order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}{% endif %}',
         processing_at: '{% if order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}{% endif %}',
         shipped_at: '{% if order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}{% endif %}',
         delivered_at: '{% if order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}{% endif %}',
+        cancelled_at: '{% if order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}{% endif %}',
         tracking_number: '{% if order.tracking_number %}{{ order.tracking_number }}{% endif %}',
         ship_name: '{{ order.ship_name }}',
         ship_phone: '{{ order.ship_phone }}',
@@ -208,6 +214,7 @@ function showTrackingModal(orderId) {
     let html = '<div style="display: flex; gap: 2rem;">';
     html += '<div style="flex: 1;">';
     html += '<div class="tracking-timeline">';
+    
     html += '<div class="tracking-step' + (tracking.placed_at ? ' completed' : '') + '">';
     html += '<div class="tracking-label">Placed</div>';
     if (tracking.placed_at) html += '<div class="tracking-time">' + tracking.placed_at + '</div>';
@@ -229,10 +236,18 @@ function showTrackingModal(orderId) {
     if (tracking.tracking_number) html += '<div class="tracking-time">Tracking: ' + tracking.tracking_number + '</div>';
     html += '</div>';
     
-    html += '<div class="tracking-step' + (tracking.delivered_at ? ' completed' : '') + '">';
-    html += '<div class="tracking-label">Delivered</div>';
-    if (tracking.delivered_at) html += '<div class="tracking-time">' + tracking.delivered_at + '</div>';
-    html += '</div>';
+    if (tracking.order_status === 'Cancelled') {
+        html += '<div class="tracking-step completed">';
+        html += '<div class="tracking-label" style="color: #e74c3c;">Cancelled</div>';
+        if (tracking.cancelled_at) html += '<div class="tracking-time">' + tracking.cancelled_at + '</div>';
+        html += '</div>';
+    } else {
+        html += '<div class="tracking-step' + (tracking.delivered_at ? ' completed' : '') + '">';
+        html += '<div class="tracking-label">Delivered</div>';
+        if (tracking.delivered_at) html += '<div class="tracking-time">' + tracking.delivered_at + '</div>';
+        html += '</div>';
+    }
+    
     html += '</div></div>';
     
     html += '<div style="flex: 0 0 250px; background: #f8f9fa; padding: 1rem; border-radius: 8px;">';

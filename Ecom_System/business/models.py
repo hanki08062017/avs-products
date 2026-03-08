@@ -174,6 +174,21 @@ class Staff(models.Model):
     def __str__(self):
         return f"{self.full_name} - {self.staff_role}"
 
+class StaffPrivileges(models.Model):
+    staff = models.OneToOneField(Staff, to_field='staff_id', on_delete=models.CASCADE, related_name='privileges')
+    manage_orders = models.BooleanField(default=False)
+    manage_products = models.BooleanField(default=False)
+    manage_reports = models.BooleanField(default=False)
+    manage_payments = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'staff_privileges'
+    
+    def __str__(self):
+        return f"Privileges for {self.staff.full_name}"
+
 class ProductCategory(models.Model):
     id = models.AutoField(primary_key=True)
     category = models.CharField(max_length=100)
@@ -332,8 +347,8 @@ class Order(models.Model):
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
     tracking_number = models.CharField(max_length=100, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
-    placed_at = models.DateTimeField(blank=True, null=True)
-    placed_by = models.CharField(max_length=100, blank=True, null=True)
+    placed_at = models.DateTimeField(auto_now_add=True)
+    placed_by = models.CharField(max_length=100)
     confirmed_at = models.DateTimeField(blank=True, null=True)
     confirmed_by = models.CharField(max_length=100, blank=True, null=True)
     processing_at = models.DateTimeField(blank=True, null=True)
@@ -354,9 +369,34 @@ class Order(models.Model):
     
     def save(self, *args, **kwargs):
         from django.utils import timezone
+        
+        # Handle initial order creation
+        if not self.pk:
+            # Always set placed_at and placed_by for new orders
+            if not self.placed_at:
+                self.placed_at = timezone.now()
+            if not self.placed_by:
+                self.placed_by = self.customer_name
+            
+            # Auto-confirm if payment is successful on creation
+            if self.payment_status == 'Successful':
+                self.order_status = 'Confirmed'
+                self.confirmed_at = timezone.now()
+                self.confirmed_by = 'System'
+        
+        # Handle status and payment changes for existing orders
         if self.pk:
             try:
                 old_order = Order.objects.get(pk=self.pk)
+                
+                # Auto-confirm when payment becomes successful
+                if old_order.payment_status != 'Successful' and self.payment_status == 'Successful':
+                    if self.order_status == 'Placed':
+                        self.order_status = 'Confirmed'
+                        self.confirmed_at = timezone.now()
+                        self.confirmed_by = 'System'
+                
+                # Handle manual status changes
                 if old_order.order_status != self.order_status:
                     status_map = {
                         'Placed': ('placed_at', 'placed_by'),
@@ -368,11 +408,13 @@ class Order(models.Model):
                     }
                     if self.order_status in status_map:
                         time_field, user_field = status_map[self.order_status]
-                        setattr(self, time_field, timezone.now())
-                        if self.modified_by:
+                        if not getattr(self, time_field):
+                            setattr(self, time_field, timezone.now())
+                        if not getattr(self, user_field) and self.modified_by:
                             setattr(self, user_field, self.modified_by)
             except Order.DoesNotExist:
                 pass
+        
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -409,6 +451,7 @@ class Payment(models.Model):
     payment_mode = models.CharField(max_length=50, choices=PAYMENT_MODE_CHOICES)
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPE_CHOICES)
     reference_order = models.ForeignKey(Order, to_field='order_id', on_delete=models.CASCADE)
+    avs_wallet_id = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.CharField(max_length=100)
     processing_at = models.DateTimeField(blank=True, null=True)

@@ -77,9 +77,20 @@
             </div>
             <div class="form-group full">
                 <label>Current Images</label>
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     {% for img in product.images.all %}
-                    <img src="{{ img.image.url }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                    <div style="position: relative; border: 2px solid {% if img.is_primary %}#3498db{% else %}#e0e0e0{% endif %}; border-radius: 8px; overflow: hidden; aspect-ratio: 1;">
+                        <img src="{{ img.image.url }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% if img.is_primary %}
+                        <span style="position: absolute; top: 5px; left: 5px; background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Primary</span>
+                        {% endif %}
+                        <div style="position: absolute; bottom: 5px; left: 5px; right: 5px; display: flex; gap: 5px;">
+                            {% if not img.is_primary %}
+                            <button type="button" onclick="setPrimary({{ img.id }})" style="flex: 1; background: #3498db; color: white; border: none; padding: 4px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Set Primary</button>
+                            {% endif %}
+                            <button type="button" onclick="removeImage({{ img.id }})" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 4px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">Remove</button>
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
@@ -89,9 +100,49 @@
             </div>
         </div>
         <div style="margin-top: 2rem;">
-            <a href="{% url 'seller_dashboard' %}" class="btn-back">Back</a>
+            <a href="{% url 'view_product' product.id %}" class="btn-back">Back</a>
             <button type="submit" class="btn-submit">Update Product</button>
         </div>
     </form>
 </div>
+
+<script>
+function removeImage(imageId) {
+    if (!confirm('Are you sure you want to remove this image?')) return;
+    
+    fetch(`/remove-product-image/${imageId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to remove image');
+        }
+    });
+}
+
+function setPrimary(imageId) {
+    fetch(`/set-primary-image/${imageId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to set primary image');
+        }
+    });
+}
+</script>
 {% endblock %}

@@ -45,7 +45,11 @@
     
     <!-- Categories Tab -->
     <div id="categories" class="tab-content active">
+        {% if is_admin %}
         <button class="btn btn-primary" onclick="showAddForm('category')" style="margin-bottom: 20px;">Add Category</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit categories</em></p>
+        {% endif %}
         
         <div class="add-form" id="add-form-category" style="display: none;">
             <h3>Add New Category</h3>
@@ -100,7 +104,13 @@
                     <td>{{ cat.sgst }}</td>
                     <td>{{ cat.cgst }}</td>
                     <td>{{ cat.gst }}</td>
-                    <td><button class="btn-edit" onclick="editRow({{ cat.id }}, 'category')">Edit</button></td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ cat.id }}, 'category')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr id="edit-{{ cat.id }}" class="edit-row">
                     <td colspan="7">
@@ -141,7 +151,11 @@
     
     <!-- GST Details Tab -->
     <div id="gst" class="tab-content">
+        {% if is_admin %}
         <button class="btn btn-primary" onclick="showAddForm('gst')" style="margin-bottom: 20px;">Add GST Details</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit GST details</em></p>
+        {% endif %}
         
         <div class="add-form" id="add-form-gst" style="display: none;">
             <h3>Add GST Details</h3>
@@ -224,7 +238,13 @@
                     <td>{{ gst.modified_at|date:"Y-m-d H:i" }}</td>
                     <td>{{ gst.modified_by|default:"N/A" }}</td>
                     <td>{{ gst.status }}</td>
-                    <td><button class="btn-edit" onclick="editRow({{ gst.serial_no }}, 'gst')">Edit</button></td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ gst.serial_no }}, 'gst')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr id="edit-gst-{{ gst.serial_no }}" class="edit-row">
                     <td colspan="14">
@@ -286,7 +306,11 @@
     
     <!-- Units Tab -->
     <div id="units" class="tab-content">
+        {% if is_admin %}
         <button class="btn btn-primary" onclick="showAddForm('unit')" style="margin-bottom: 20px;">Add Unit</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit units</em></p>
+        {% endif %}
         
         <div class="add-form" id="add-form-unit" style="display: none;">
             <h3>Add New Unit</h3>
@@ -321,7 +345,13 @@
                 <tr id="row-unit-{{ unit.id }}">
                     <td>{{ unit.name }}</td>
                     <td>{{ unit.abbreviation }}</td>
-                    <td><button class="btn-edit" onclick="editRow({{ unit.id }}, 'unit')">Edit</button></td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ unit.id }}, 'unit')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 <tr id="edit-unit-{{ unit.id }}" class="edit-row">
                     <td colspan="3">

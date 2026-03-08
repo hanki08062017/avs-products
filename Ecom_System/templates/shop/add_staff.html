@@ -16,15 +16,22 @@
 
 <div class="form-container">
     <h2>Add New Staff</h2>
+    {% if error %}
+    <div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+        {{ error }}
+    </div>
+    {% endif %}
     <div class="info-box">
-        <strong>Business Code:</strong> {{ business_code }} - Staff will be tied to this business
+        <strong>Business Code:</strong> {{ business_code }} | <strong>Business Type:</strong> {{ business_type }}
     </div>
     <form method="POST">
         {% csrf_token %}
+        
+        <h3 style="color: #2c3e50; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Personal Information</h3>
         <div class="form-grid">
             <div class="form-group">
                 <label>Staff ID *</label>
-                <input type="text" name="staff_id" required>
+                <input type="text" name="staff_id" value="{{ auto_staff_id }}" readonly style="background: #f0f0f0;" required>
             </div>
             <div class="form-group">
                 <label>Username *</label>
@@ -52,15 +59,54 @@
             </div>
             <div class="form-group">
                 <label>Staff Role *</label>
-                <select name="staff_role" required>
-                    <option value="">Select Role</option>
-                    <option value="Seller-Admin">Seller-Admin</option>
-                    <option value="Seller-Staff">Seller-Staff</option>
-                    <option value="Shop-Admin">Shop-Admin</option>
-                    <option value="Shop-Staff">Shop-Staff</option>
-                </select>
+                <input type="text" name="staff_role" value="{{ allowed_role }}" readonly style="background: #f0f0f0;" required>
             </div>
         </div>
+        
+        <h3 style="color: #2c3e50; margin: 1.5rem 0 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Address Information</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Address Line 1</label>
+                <input type="text" name="address1">
+            </div>
+            <div class="form-group">
+                <label>Address Line 2</label>
+                <input type="text" name="address2">
+            </div>
+            <div class="form-group">
+                <label>Address Line 3</label>
+                <input type="text" name="address3">
+            </div>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" name="city">
+            </div>
+            <div class="form-group">
+                <label>State</label>
+                <input type="text" name="state">
+            </div>
+            <div class="form-group">
+                <label>PIN Code</label>
+                <input type="text" name="pin">
+            </div>
+            <div class="form-group">
+                <label>Country</label>
+                <input type="text" name="country">
+            </div>
+            <div class="form-group">
+                <label>Phone 2</label>
+                <input type="text" name="phone2">
+            </div>
+        </div>
+        
+        <h3 style="color: #2c3e50; margin: 1.5rem 0 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Staff Privileges</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_orders" style="width: auto; margin-right: 0.5rem;"> Manage Orders</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_products" style="width: auto; margin-right: 0.5rem;"> Manage Products</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_reports" style="width: auto; margin-right: 0.5rem;"> Manage Reports</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_payments" style="width: auto; margin-right: 0.5rem;"> Manage Payments</label>
+        </div>
+        
         <div style="margin-top: 2rem;">
             <a href="{% url 'manage_staff' %}" class="btn-back">Back</a>
             <button type="submit" class="btn-submit">Add Staff</button>
