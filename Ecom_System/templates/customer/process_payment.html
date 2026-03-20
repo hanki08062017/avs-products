@@ -1,0 +1,459 @@
+{% extends 'customer/base.html' %}
+
+{% block title %}Process Payment{% endblock %}
+
+{% block content %}
+<style>
+body { background: #f8f9fa; }
+.payment-container { background: white; border-radius: 10px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+.section-title { color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid #3498db; }
+.form-label { font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem; }
+.card-icon { font-size: 2rem; margin-right: 10px; }
+</style>
+
+<div class="container">
+    <h2 class="mb-4" style="color: #2c3e50; font-weight: bold;">Payment</h2>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="payment-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="section-title mb-0">Payment Method</h4>
+                    <a href="/confirm-order/" class="btn btn-sm btn-outline-secondary">Change Method</a>
+                </div>
+                
+                <div id="cardPayment" style="display: none;">
+                    <h5 class="mb-3" style="color: #2c3e50;">
+                        <span class="card-icon">💳</span>Card Payment
+                    </h5>
+                    <form id="cardForm" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="payment_method" value="Card">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Card Number *</label>
+                            <input type="text" class="form-control" name="card_number" placeholder="1234 5678 9012 3456" required pattern="[0-9]{16}" maxlength="16">
+                            {% if saved_card %}<small class="text-muted">Last saved: **** **** **** {{ saved_card.card_last4 }}</small>{% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Cardholder Name *</label>
+                            <input type="text" class="form-control" name="card_name" placeholder="Name on card" value="{% if saved_card %}{{ saved_card.card_name }}{% endif %}" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Expiry Date *</label>
+                                <input type="text" class="form-control" name="expiry" placeholder="MM/YY" required pattern="[0-9]{2}/[0-9]{2}" maxlength="5">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">CVV *</label>
+                                <input type="password" class="form-control" name="cvv" placeholder="123" required pattern="[0-9]{3}" maxlength="3">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100 mt-3" style="padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                            Pay ₹<span id="cardTotal">0.00</span>
+                        </button>
+                    </form>
+                </div>
+                
+                <div id="upiPayment" style="display: none;">
+                    <h5 class="mb-3" style="color: #2c3e50;">
+                        <span class="card-icon">📱</span>UPI Payment
+                    </h5>
+                    <form id="upiForm" method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="payment_method" value="UPI">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">UPI ID *</label>
+                            <input type="text" class="form-control" name="upi_id" placeholder="yourname@upi" value="{% if saved_upi %}{{ saved_upi.upi_id }}{% endif %}" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100 mt-3" style="padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                            Pay ₹<span id="upiTotal">0.00</span>
+                        </button>
+                    </form>
+                </div>
+                
+                <div id="walletPayment" style="display: none;">
+                    <h5 class="mb-3" style="color: #2c3e50;">
+                        <span class="card-icon">👛</span>Wallet Payment
+                    </h5>
+                    
+                    <div id="walletSelectStep">
+                        <div class="mb-3">
+                            <label class="form-label">Select Wallet *</label>
+                            <select class="form-control" id="walletSelect" required>
+                                <option value="">-- Select Wallet --</option>
+                                {% if normal_wallet %}
+                                <option value="{{ normal_wallet.wallet_id }}" data-amount="{{ normal_wallet.wallet_amount }}" data-type="Other" data-mobile="">
+                                    Normal Wallet - ₹{{ normal_wallet.wallet_amount }}
+                                </option>
+                                {% endif %}
+                                {% for wallet in avs_wallets %}
+                                <option value="{{ wallet.wallet_id }}" data-amount="{{ wallet.wallet_amount }}" data-type="AVS" data-mobile="{{ wallet.customer_mobile }}" data-customer-id="{{ wallet.customer_id }}">
+                                    AVS Wallet ({{ wallet.customer_id }}) - ₹{{ wallet.wallet_amount }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info" id="walletBalanceAlert" style="display: none;">
+                            <strong>Selected Wallet Balance:</strong> ₹<span id="selectedBalance">0.00</span>
+                        </div>
+                        
+                        <div class="alert alert-warning" id="insufficientBalanceAlert" style="display: none;">
+                            AVS Wallet balance ₹<span id="avsBalance">0.00</span> is insufficient. Remaining ₹<span id="remainingAmount">0.00</span> will be paid from your Normal Wallet.
+                        </div>
+                        <div class="alert alert-danger" id="noNormalWalletAlert" style="display: none;">
+                            <strong>Insufficient Balance!</strong> Normal Wallet also doesn't have enough to cover the remaining amount.
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary w-100 mt-3" id="proceedPayBtn" onclick="proceedWithWallet()" style="padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                            Proceed to Pay ₹<span id="walletTotal">0.00</span>
+                        </button>
+                    </div>
+                    
+                    <div id="walletOtpStep" style="display: none;">
+                        <div class="alert alert-warning" id="otpSentMessage" style="display: none;">
+                            OTP sent to <strong><span id="maskedMobile"></span></strong>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Enter OTP *</label>
+                            <input type="text" class="form-control" id="walletOtp" placeholder="Enter 6-digit OTP" maxlength="6" required>
+                        </div>
+                        
+                        <form id="walletForm" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="payment_method" value="Wallet">
+                            <input type="hidden" name="avs_wallet_id" id="selectedWalletId">
+                            <input type="hidden" name="normal_wallet_id" id="normalWalletIdForSplit">
+                            <input type="hidden" name="wallet_otp" id="walletOtpValue">
+                            
+                            <button type="button" class="btn btn-success w-100 mt-3" onclick="verifyWalletOtp()" style="padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                                Verify OTP & Pay ₹<span id="walletTotal2">0.00</span>
+                            </button>
+                        </form>
+                        
+                        <button type="button" class="btn btn-link w-100 mt-2" onclick="backToWalletSelect()">Change Wallet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="payment-container">
+                <h4 class="section-title">Order Summary</h4>
+                <div id="orderSummary"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const DELIVERY_DATA = {{ delivery_data|safe }};
+
+function loadOrderSummary() {
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let groupedCart = {};
+    cart.forEach(item => {
+        if (groupedCart[item.id]) groupedCart[item.id].quantity++;
+        else groupedCart[item.id] = {...item, quantity: 1};
+    });
+    
+    let subtotal = 0, totalMRP = 0, totalShipCharge = 0;
+    Object.values(groupedCart).forEach(item => {
+        subtotal += item.price * item.quantity;
+        totalMRP += (item.mrp || item.price) * item.quantity;
+        totalShipCharge += item.ship;
+    });
+    
+    let totalDiscount = totalMRP - subtotal;
+    let deliveryCharges = (() => {
+        let shipCharge = DELIVERY_DATA.ship_free ? 0 : totalShipCharge;
+        let deliveryCharge = DELIVERY_DATA.delivery_free ? 0 : DELIVERY_DATA.base_charge;
+        let minCharges = shipCharge + deliveryCharge;
+        return (DELIVERY_DATA.min_amount_free_delivery > 0 && subtotal >= DELIVERY_DATA.min_amount_free_delivery) ? 0 : minCharges;
+    })();
+    let total = subtotal + deliveryCharges;
+    
+    document.getElementById('orderSummary').innerHTML = `
+        <div style="font-size: 0.9rem;">
+            <div class="d-flex justify-content-between mb-2">
+                <span>Items:</span>
+                <span>${Object.keys(groupedCart).length}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total MRP:</span>
+                <span>₹${totalMRP.toFixed(2)}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2" style="color: #27ae60;">
+                <span>Discount:</span>
+                <span>-₹${totalDiscount.toFixed(2)}</span>
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Subtotal:</span>
+                <span>₹${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Delivery:</span>
+                <span>${deliveryCharges > 0 ? '₹' + deliveryCharges.toFixed(2) : 'Free'}</span>
+            </div>
+            <hr style="border-top: 2px solid #dee2e6;">
+            <div class="d-flex justify-content-between" style="font-size: 1.1rem;">
+                <strong>Total:</strong>
+                <strong style="color: #27ae60;">₹${total.toFixed(2)}</strong>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('cardTotal').textContent = total.toFixed(2);
+    document.getElementById('upiTotal').textContent = total.toFixed(2);
+    document.getElementById('walletTotal').textContent = total.toFixed(2);
+    document.getElementById('walletTotal2').textContent = total.toFixed(2);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+window.onload = function() {
+    loadOrderSummary();
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const method = urlParams.get('method');
+    
+    if (method === 'Card') {
+        document.getElementById('cardPayment').style.display = 'block';
+    } else if (method === 'UPI') {
+        document.getElementById('upiPayment').style.display = 'block';
+    } else if (method === 'Wallet') {
+        document.getElementById('walletPayment').style.display = 'block';
+    }
+    
+    // Wallet selection handler
+    const walletSelect = document.getElementById('walletSelect');
+    if (walletSelect) {
+        walletSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const balance = selectedOption.getAttribute('data-amount');
+            const proceedBtn = document.getElementById('proceedPayBtn');
+            
+            if (balance) {
+                const balanceAmount = parseFloat(balance);
+                const walletType = selectedOption.getAttribute('data-type');
+                document.getElementById('selectedBalance').textContent = balanceAmount.toFixed(2);
+                document.getElementById('walletBalanceAlert').style.display = 'block';
+                document.getElementById('insufficientBalanceAlert').style.display = 'none';
+                document.getElementById('noNormalWalletAlert').style.display = 'none';
+
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                let groupedCart = {};
+                cart.forEach(item => { if (groupedCart[item.id]) groupedCart[item.id].quantity++; else groupedCart[item.id] = {...item, quantity: 1}; });
+                let subtotal = Object.values(groupedCart).reduce((s, i) => s + i.price * i.quantity, 0);
+                let totalShipCharge = Object.values(groupedCart).reduce((s, i) => s + i.ship, 0);
+                let shipCharge = DELIVERY_DATA.ship_free ? 0 : totalShipCharge;
+                let deliveryCharge = DELIVERY_DATA.delivery_free ? 0 : DELIVERY_DATA.base_charge;
+                let total = subtotal + ((DELIVERY_DATA.min_amount_free_delivery > 0 && subtotal >= DELIVERY_DATA.min_amount_free_delivery) ? 0 : shipCharge + deliveryCharge);
+
+                if (walletType === 'AVS' && balanceAmount < total) {
+                    const remaining = total - balanceAmount;
+                    {% if normal_wallet %}
+                    const normalBalance = parseFloat('{{ normal_wallet.wallet_amount }}');
+                    if (normalBalance >= remaining) {
+                        document.getElementById('avsBalance').textContent = balanceAmount.toFixed(2);
+                        document.getElementById('remainingAmount').textContent = remaining.toFixed(2);
+                        document.getElementById('insufficientBalanceAlert').style.display = 'block';
+                        proceedBtn.disabled = false;
+                        proceedBtn.style.opacity = '1';
+                        proceedBtn.style.cursor = 'pointer';
+                    } else {
+                        document.getElementById('noNormalWalletAlert').style.display = 'block';
+                        proceedBtn.disabled = true;
+                        proceedBtn.style.opacity = '0.5';
+                        proceedBtn.style.cursor = 'not-allowed';
+                    }
+                    {% else %}
+                    document.getElementById('noNormalWalletAlert').style.display = 'block';
+                    proceedBtn.disabled = true;
+                    proceedBtn.style.opacity = '0.5';
+                    proceedBtn.style.cursor = 'not-allowed';
+                    {% endif %}
+                } else {
+                    proceedBtn.disabled = false;
+                    proceedBtn.style.opacity = '1';
+                    proceedBtn.style.cursor = 'pointer';
+                }
+            } else {
+                document.getElementById('walletBalanceAlert').style.display = 'none';
+                document.getElementById('insufficientBalanceAlert').style.display = 'none';
+                document.getElementById('noNormalWalletAlert').style.display = 'none';
+                proceedBtn.disabled = true;
+                proceedBtn.style.opacity = '0.5';
+                proceedBtn.style.cursor = 'not-allowed';
+            }
+        });
+    }
+};
+
+function proceedWithWallet() {
+    const walletSelect = document.getElementById('walletSelect');
+    const selectedOption = walletSelect.options[walletSelect.selectedIndex];
+    const proceedBtn = document.getElementById('proceedPayBtn');
+    
+    if (!selectedOption.value) {
+        alert('Please select a wallet');
+        return;
+    }
+    
+    // Check if button is disabled
+    if (proceedBtn.disabled) {
+        alert('Insufficient wallet balance. Please select another wallet or payment method.');
+        return;
+    }
+    
+    const walletType = selectedOption.getAttribute('data-type');
+    const walletId = selectedOption.value;
+    const mobile = selectedOption.getAttribute('data-mobile');
+    const customerId = selectedOption.getAttribute('data-customer-id');
+    
+    // Store selected wallet ID
+    document.getElementById('selectedWalletId').value = walletId;
+
+    // If split payment needed, store normal wallet id
+    {% if normal_wallet %}
+    if (walletType === 'AVS') {
+        let cart2 = JSON.parse(localStorage.getItem('cart') || '[]');
+        let gc2 = {};
+        cart2.forEach(i => { if (gc2[i.id]) gc2[i.id].quantity++; else gc2[i.id] = {...i, quantity: 1}; });
+        let sub2 = Object.values(gc2).reduce((s, i) => s + i.price * i.quantity, 0);
+        let ship2 = DELIVERY_DATA.ship_free ? 0 : Object.values(gc2).reduce((s, i) => s + i.ship, 0);
+        let dc2 = DELIVERY_DATA.delivery_free ? 0 : DELIVERY_DATA.base_charge;
+        let total2 = sub2 + ((DELIVERY_DATA.min_amount_free_delivery > 0 && sub2 >= DELIVERY_DATA.min_amount_free_delivery) ? 0 : ship2 + dc2);
+        const avsAmt = parseFloat(selectedOption.getAttribute('data-amount'));
+        document.getElementById('normalWalletIdForSplit').value = avsAmt < total2 ? '{{ normal_wallet.wallet_id }}' : '';
+    } else {
+        document.getElementById('normalWalletIdForSplit').value = '';
+    }
+    {% endif %}
+
+    // If AVS wallet, send OTP
+    if (walletType === 'AVS') {
+        // Send OTP request
+        fetch('/wallet/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new URLSearchParams({
+                'action': 'send_payment_otp',
+                'wallet_id': walletId,
+                'customer_id': customerId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mask mobile number
+                const maskedMobile = mobile.substring(0, 2) + 'XXXX' + mobile.substring(mobile.length - 2);
+                document.getElementById('maskedMobile').textContent = maskedMobile;
+                document.getElementById('otpSentMessage').style.display = 'block';
+                
+                // Show OTP step
+                document.getElementById('walletSelectStep').style.display = 'none';
+                document.getElementById('walletOtpStep').style.display = 'block';
+                
+                // Show demo OTP in console (for testing)
+                if (data.demo_otp) {
+                    console.log('Demo OTP:', data.demo_otp);
+                    alert('Demo OTP: ' + data.demo_otp);
+                }
+            } else {
+                alert(data.message || 'Failed to send OTP');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send OTP');
+        });
+    } else {
+        // Normal wallet - no OTP required, submit directly
+        document.getElementById('walletForm').submit();
+    }
+}
+
+function verifyWalletOtp() {
+    const otp = document.getElementById('walletOtp').value;
+    
+    if (!otp || otp.length !== 6) {
+        alert('Please enter a valid 6-digit OTP');
+        return;
+    }
+    
+    const walletId = document.getElementById('selectedWalletId').value;
+    
+    // Verify OTP
+    fetch('/wallet/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            'action': 'verify_payment_otp',
+            'wallet_id': walletId,
+            'otp': otp
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // OTP verified, submit payment form
+            document.getElementById('walletOtpValue').value = otp;
+            document.getElementById('walletForm').submit();
+        } else {
+            alert(data.message || 'Invalid OTP');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to verify OTP');
+    });
+}
+
+function backToWalletSelect() {
+    document.getElementById('walletOtpStep').style.display = 'none';
+    document.getElementById('walletSelectStep').style.display = 'block';
+    document.getElementById('walletOtp').value = '';
+    document.getElementById('otpSentMessage').style.display = 'none';
+};
+
+document.getElementById('cardForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+});
+
+document.getElementById('upiForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    this.submit();
+});
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'seller/management_base.html' %}
+
+{% block content %}
+<style>
+    .dashboard-header { margin-bottom: 2rem; }
+    .dashboard-header h2 { color: #2c3e50; }
+    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+    .stat-card h3 { font-size: 2.5rem; color: #16a085; margin-bottom: 0.5rem; }
+    .stat-card p { color: #7f8c8d; font-size: 0.9rem; }
+    .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .card h3 { color: #2c3e50; margin-bottom: 1.5rem; border-bottom: 2px solid #16a085; padding-bottom: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    table th, table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ecf0f1; }
+    table th { background: #f8f9fa; color: #2c3e50; font-weight: bold; }
+    .business-item { padding: 1rem; background: #f8f9fa; border-radius: 4px; margin-bottom: 0.75rem; }
+    .business-item strong { color: #16a085; }
+</style>
+
+<div class="dashboard-header">
+    <h2>Management Dashboard</h2>
+    <p>System-wide overview and analytics</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>{{ total_users }}</h3>
+        <p>Total Users</p>
+    </div>
+    <div class="stat-card">
+        <h3>{{ total_businesses }}</h3>
+        <p>Businesses</p>
+    </div>
+    <div class="stat-card">
+        <h3>{{ total_products }}</h3>
+        <p>Products</p>
+    </div>
+    <div class="stat-card">
+        <h3>{{ total_orders }}</h3>
+        <p>Orders</p>
+    </div>
+    <div class="stat-card">
+        <h3>{{ total_staff }}</h3>
+        <p>Staff Members</p>
+    </div>
+</div>
+
+<div class="content-grid">
+    <div class="card">
+        <h3>Recent Orders</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>{{ order.order_id }}</td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>₹{{ order.total_amount }}</td>
+                    <td>{{ order.order_status }}</td>
+                    <td>{{ order.created_at|date:"d M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">No orders found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h3>Registered Businesses</h3>
+        {% for business in businesses %}
+        <div class="business-item">
+            <strong>{{ business.business_name }}</strong><br>
+            <small>Code: {{ business.code }} | Type: {{ business.business_type }}</small><br>
+            <small>Status: {{ business.status }}</small>
+        </div>
+        {% empty %}
+        <p>No businesses registered</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - {{ order.order_id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .invoice-header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; }
+        .invoice-title { font-size: 24px; font-weight: bold; color: #2c3e50; margin: 0; }
+        .company-name { font-size: 24px; color: #3498db; margin: 10px 0; }
+        .invoice-details { display: flex; justify-content: space-between; margin: 30px 0; }
+        .detail-section { width: 48%; }
+        .detail-section h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+        .detail-row { margin: 8px 0; }
+        .label { font-weight: bold; color: #555; }
+        .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+        .items-table th { background: #2c3e50; color: white; padding: 12px; text-align: left; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .items-table tr:hover { background: #f8f9fa; }
+        .total-section { text-align: right; margin-top: 20px; }
+        .total-row { margin: 8px 0; font-size: 16px; }
+        .grand-total { font-size: 24px; font-weight: bold; color: #27ae60; margin-top: 15px; padding-top: 15px; border-top: 2px solid #2c3e50; }
+        .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 2px solid #ddd; color: #7f8c8d; }
+        .download-btn { background: #27ae60; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin: 20px 0; }
+        .download-btn:hover { background: #229954; }
+        @media print { .download-btn { display: none; } }
+    </style>
+</head>
+<body>
+    <div style="text-align: center;">
+        <button class="download-btn" onclick="window.print()">Download / Print Invoice</button>
+    </div>
+    
+    <div class="invoice-header">
+        <div class="company-name">Arthish vs Food Products</div>
+        <div class="invoice-title">INVOICE</div>
+    </div>
+    
+    <div class="invoice-details">
+        <div class="detail-section">
+            <h3>Order Details</h3>
+            <div class="detail-row"><span class="label">Order ID:</span> {{ order.order_id }}</div>
+            <div class="detail-row"><span class="label">Order Date:</span> {{ order.placed_at|date:"d M Y, h:i A" }}</div>
+            <div class="detail-row"><span class="label">Payment Method:</span> {{ order.payment_method }}</div>
+            <div class="detail-row"><span class="label">Payment Status:</span> {{ order.payment_status }}</div>
+        </div>
+        
+        <div class="detail-section">
+            <h3>Customer Details</h3>
+            <div class="detail-row"><span class="label">Name:</span> {{ order.customer_name }}</div>
+            <div class="detail-row"><span class="label">Email:</span> {{ order.customer_email }}</div>
+            <div class="detail-row"><span class="label">Phone:</span> {{ order.customer_phone }}</div>
+        </div>
+    </div>
+    
+    <div class="invoice-details">
+        <div class="detail-section">
+            <h3>Billing Address</h3>
+            <div class="detail-row">{{ order.bill_name }}</div>
+            <div class="detail-row">{{ order.bill_phone }}</div>
+            <div class="detail-row">{{ order.bill_address1 }}</div>
+            {% if order.bill_address2 %}<div class="detail-row">{{ order.bill_address2 }}</div>{% endif %}
+            <div class="detail-row">{{ order.bill_city }}, {{ order.bill_state }} - {{ order.bill_pin }}</div>
+            <div class="detail-row">{{ order.bill_country }}</div>
+        </div>
+        
+        <div class="detail-section">
+            <h3>Shipping Address</h3>
+            <div class="detail-row">{{ order.ship_name }}</div>
+            <div class="detail-row">{{ order.ship_phone }}</div>
+            <div class="detail-row">{{ order.ship_address1 }}</div>
+            {% if order.ship_address2 %}<div class="detail-row">{{ order.ship_address2 }}</div>{% endif %}
+            <div class="detail-row">{{ order.ship_city }}, {{ order.ship_state }} - {{ order.ship_pin }}</div>
+            <div class="detail-row">{{ order.ship_country }}</div>
+        </div>
+    </div>
+    
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: right;">Base Price</th>
+                <th style="text-align: right;">GST</th>
+                <th style="text-align: right;">Price</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td style="text-align: center;">{{ item.quantity }}</td>
+                <td style="text-align: right;">₹{{ item.base_price|floatformat:2 }}</td>
+                <td style="text-align: right;">{{ item.gst|floatformat:2 }}%</td>
+                <td style="text-align: right;">₹{{ item.price|floatformat:2 }}</td>
+                <td style="text-align: right;">₹{% widthratio item.price 1 item.quantity %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="total-section">
+        <div class="grand-total">Total Amount: ₹{{ order.total_amount }}</div>
+    </div>
+    
+    <div class="footer">
+        <p>Thank you for your business!</p>
+        <p>AVS Products | Email: info@avsproducts.com | Phone: +91 1234567890</p>
+    </div>
+</body>
+</html>

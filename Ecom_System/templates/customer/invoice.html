@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - {{ order.order_id }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #333; }
+        .page { max-width: 860px; margin: 30px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.12); }
+
+        /* Header */
+        .header { background: white; color: white; padding: 6px 30px; display: flex; justify-content: space-between; }
+        .brand-name { font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #031d3d; }
+        .brand-tagline { font-size: 10px; color: #03152b; margin-top: 2px; }
+        .receipt-type { font-size: 10px; color: #03152b; }
+        /* invoice */
+        .invoice { background: #e9edf1; border-bottom: 1px solid #03152b; padding: 4px 30px; display: flex; gap: 20px; align-items: center; }
+        .gst-label { display: flex; gap: 6px; justify-content: flex-start; width: 100%;}
+        .invoice-label { display: flex; gap: 6px; justify-content: flex-end; width: 100%; }
+        .invoice-row { font-size: 11px; margin-bottom: 1px; color: #03152b; }
+        .invoice-row strong { color: #03152b; }
+
+        /* Body */
+        .body { padding: 6px 30px; }
+
+        /* Info grid */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 2px; }
+        .info-box { border: 1px solid #e9ecef; border-radius: 6px; padding: 8px 12px; }
+        .info-box h4 { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 6px; border-bottom: 2px solid #e2b96f; padding-bottom: 4px; display: inline-block; }
+        .info-row { font-size: 11px; margin-bottom: 3px; color: #444; }
+        .info-row strong { color: #03152b; }
+
+        /* Address grid */
+        .addr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 6px; }
+        .addr-box { ; border-radius: 6px; padding: 8px 12px; border-left: 4px solid #e9edf1; }
+        .addr-box h4 { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #0f3460; margin-bottom: 6px; font-weight: 700; }
+        .addr-box p { font-size: 11px; line-height: 1.5; color: #444; }
+
+        /* Table */
+        .table-wrap { border-radius: 5px; overflow: hidden; border: 1px solid #e9ecef; margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        thead tr { background: #e9edf1; color: #03152b; }
+        thead th { padding: 4px 6px; text-align: left; font-weight: 600; letter-spacing: 0.5px; white-space: nowrap; }
+        tbody tr { border-bottom: 1px solid #f0f0f0; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:nth-child(even) { background: #fafafa; }
+        tbody td { padding: 5px 6px; color: #444; white-space: nowrap; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .item-name { font-weight: 600; color: #1a1a2e; }
+        .gst-badge { background: #e8f4fd; color: #2980b9; padding: 1px 5px; border-radius: 10px; font-size: 10px; }
+
+        /* Totals */
+        .totals-sig { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+        .totals-box { background: #f7f7fa; width: 240px; }
+        .totals-items { display: flex; justify-content: space-between; padding: 1px 12px; color: black; margin-top: 1px; font-size: 11px; }
+        .totals-grand { display: flex; justify-content: space-between; padding: 6px 12px; background: #dcdce3; color: black; border-radius: 2px; margin-top: 6px; font-size: 13px; font-weight: 700; }
+
+        /* Footer */
+        .footer { background: #f8f9fa; border-top: 1px solid #e9ecef; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #888; }
+        .footer-note { font-style: italic; }
+
+        /* Print button */
+        .print-bar { text-align: center; padding: 20px; }
+        .print-btn { background: linear-gradient(135deg, #0f3460, #1a1a2e); color: white; border: none; padding: 12px 36px; font-size: 15px; border-radius: 6px; cursor: pointer; letter-spacing: 0.5px; }
+        .print-btn:hover { opacity: 0.9; }
+
+        @media print {
+            body { background: white; }
+            .page { box-shadow: none; margin: 0; border-radius: 0; max-width: 100%; }
+            .print-bar { display: none; }
+            @page { size: A4; margin: 8mm; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="print-bar">
+    <button class="print-btn" onclick="downloadInvoice()">⬇ Download Invoice</button>
+</div>
+<script>
+function downloadInvoice() {
+    const originalTitle = document.title;
+    document.title = 'Invoice-{{ order.order_id }}';
+    window.print();
+    document.title = originalTitle;
+}
+</script>
+
+<div class="page">
+
+    <div class="header">
+        <div>
+            <div class="brand-name">Arthish vs Food Products</div>
+            <div class="brand-tagline">Quality You Can Trust</div>
+        </div>
+         <div>
+            <div><span class="receipt-type">Original</span></div>
+        </div>
+    </div>
+    <div class="invoice">
+        <div class="gst-label">
+            <div class="invoice-row"><strong>GSTIN:</strong> {{ gstin.0.gst_number }}</div>
+        </div>
+        <div class="invoice-label">
+            <div class="invoice-row"><strong>Invoice No. </strong>#{{ order.invoice_no|stringformat:"03d" }}  {{ order.processing_at|date:"d-M-Y" }}</div>
+
+        </div>
+    </div>
+
+    {% comment %} <div class="status-bar">
+        <div class="status-item">
+            <span class="status-dot {% if order.payment_status != 'Successful' %}pending{% endif %}"></span>
+            Payment: <strong>{{ order.payment_status }}</strong>
+        </div>
+        <div class="status-item">
+            <span class="status-dot"></span>
+            Order Status: <strong>{{ order.order_status }}</strong>
+        </div>
+        <div class="status-item">
+            Method: <strong>{{ order.payment_method }}</strong>
+        </div>
+    </div> {% endcomment %}
+
+    <div class="body">
+
+        <div class="info-grid">
+             <div class="info-box">
+                <h4>Customer Details</h4>
+                <div class="info-row"><strong>Name:</strong> {{ order.customer_name }}</div>
+                <div class="info-row"><strong>Phone:</strong> {{ order.customer_phone }}</div><br>
+                <hr>
+                <div class="info-row"><strong>Sold By:</strong> {{ gstin.0.business_code.business_name}}, {{ gstin.0.business_code.city}}, {{ gstin.0.business_code.country}}</div>
+            </div>
+            <div class="info-box">
+                <h4>Order Information</h4>
+                <div class="info-row"><strong>Order ID:</strong> {{ order.order_id }}</div>
+                <div class="info-row"><strong>Date:</strong> {{ order.placed_at|date:"d-M-Y, h:i A" }}</div>
+                <div class="info-row"><strong>Payment Method:</strong> {{ order.payment_method }}</div>
+                <div class="info-row"><strong>Order Status:</strong> {{ order.order_status }} {{ order.delivered_at|date:"d-M-Y" }}</div>
+            </div>
+            
+           
+        </div>
+
+        <div class="addr-grid">
+            <div class="addr-box">
+                <h4>Billing To</h4>
+                <p>
+                    <strong>{{ order.bill_name }}</strong><br>
+                    {{ order.bill_phone }}<br>
+                    {{ order.bill_address1 }}{% if order.bill_address2 %}, {{ order.bill_address2 }}{% endif %}<br>
+                    {{ order.bill_city }}, {{ order.bill_state }} - {{ order.bill_pin }}, {{ order.bill_country }}
+                </p>
+            </div>
+            <div class="addr-box">
+                <h4>Shipping To</h4>
+                <p>
+                    <strong>{{ order.ship_name }}</strong><br>
+                    {{ order.ship_phone }}<br>
+                    {{ order.ship_address1 }}{% if order.ship_address2 %}, {{ order.ship_address2 }}{% endif %}<br>
+                    {{ order.ship_city }}, {{ order.ship_state }} - {{ order.ship_pin }}, {{ order.ship_country }}
+                </p>
+            </div>
+        </div>
+<hr>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sn.</th>
+                        <th>Product</th>
+                        <th class="text-center">HSN/SAC</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-right">Base Price</th>
+                        <th class="text-right">Taxable Value</th>
+                        <th class="text-center">GST</th>
+                        <th class="text-center">IGST</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="item-name">{{ item.name }}</td>
+                        <td class="text-center">{{ item.hsn }}</td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-right" >₹{{ item.base_price|floatformat:2 }}</td>
+                        <td class="text-right" >₹{% load mathfilters %}{{ item.base_price|mul:item.quantity|floatformat:2 }}</td>
+                        <td class="text-center"><span class="gst-badge">{{ item.gst|floatformat:2 }}%</span></td>
+                        <td class="text-right">₹{% load mathfilters %}{{ item.base_price|mul:item.quantity|mul:item.gst|mul:0.01|floatformat:2 }}</td>
+                        <td class="text-right">₹{% widthratio item.price 1 item.quantity  as total %}{{ total|floatformat:2 }}</td>
+                                        
+                    </tr>
+                   
+                    {% endfor %}
+                    
+                    <tr>
+                        <td></td>
+                        <td class="item-name"></td>
+                        <td class="item-name text-right">Total</td>
+                        <td class="item-name text-center">{{ total.total_items }}</td>
+                        <td class="text-right" ></td>
+                        <td class="item-name text-right" >₹{{ total.total_base_price|floatformat:2 }}</td>
+                        <td class="text-center"></td>
+                        <td class="text-right">₹{{ total.total_igst|floatformat:2 }}</td>
+                        <td class="text-right">₹{{ total.total_price|floatformat:2 }}</td>                   
+                    </tr>
+                </tbody>
+                
+            </table>
+        </div>
+
+        <div class="totals-sig">
+            <div class="totals-box">
+                <div class="totals-items"><span>Total MRP</span><span>₹{{ total.total_mrp|floatformat:2 }}</span></div>
+                <div class="totals-items"><span>Discount</span><span>-₹{{ total.total_discount|floatformat:2 }}</span></div>
+                <hr>
+                <div class="totals-items"><span>Taxable Amount</span><span>₹{{ total.total_base_price|floatformat:2 }}</span></div>
+                <div class="totals-items"><span>IGST</span><span>₹{{ total.total_igst|floatformat:2 }}</span></div>
+                <hr>
+                <div class="totals-items"><span>Delivery Charge</span><span>₹0.00</span></div>
+                <div class="totals-grand"><span>Grand Total</span><span>₹{{ order.total_amount }}</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-note">Thank you for shopping with AVS Food Products!</div>
+        <div style="font-size:9px; color:#aaa; font-style:italic;">This is a computer-generated invoice and does not require a physical signature.</div>
+        <div>info@avsproducts.com &nbsp;|&nbsp; +91 1234567890</div>
+    </div>
+
+</div>
+
+
+
+</body>
+</html>

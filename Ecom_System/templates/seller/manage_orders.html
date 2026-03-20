@@ -1,0 +1,57 @@
+{% extends 'seller/seller_base.html' %}
+
+{% block content %}
+<style>
+    .orders-container { max-width: 1200px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .orders-container h2 { color: #2c3e50; margin-bottom: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+    table th { background: #34495e; color: white; }
+    .status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.875rem; }
+    .status-placed { background: #3498db; color: white; }
+    .status-confirmed { background: #f39c12; color: white; }
+    .status-shipped { background: #9b59b6; color: white; }
+    .status-delivered { background: #27ae60; color: white; }
+    .status-cancelled { background: #e74c3c; color: white; }
+    .btn-back { background: #95a5a6; color: white; padding: 0.75rem 2rem; border-radius: 4px; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+</style>
+
+<div class="orders-container">
+    <a href="{% url 'seller_dashboard' %}" class="btn-back">Back to Dashboard</a>
+    <h2>Manage Orders</h2>
+    <p style="color: #7f8c8d; margin-bottom: 1rem;">Business Code: {{ business_code }} | Total Orders: {{ orders|length }}</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Payment</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.order_id }}</td>
+                <td>{{ order.customer_name }}</td>
+                <td>₹{{ order.total_amount }}</td>
+                <td>
+                    <span class="status-badge status-{{ order.order_status|lower }}">
+                        {{ order.order_status }}
+                    </span>
+                </td>
+                <td>{{ order.payment_status }}</td>
+                <td>{{ order.created_at|date:"d M Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No orders found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

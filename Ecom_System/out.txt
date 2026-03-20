@@ -1,0 +1,28 @@
+def checkout(request):
+    if not request.session.get('is_logged_in'):
+        request.session['next'] = '/checkout/'
+        return redirect('login')
+    
+    # Get user
+    username = request.session.get('user_id')
+    user = Customer.objects.filter(username=username).first()
+    user_pin = user.profile.pin if user and user.profile else ''
+    delivery_zone = 
+    min_amount_free_delivery = 
+    max_distance_km = 
+    distance = 
+    
+    # if request.method == 'POST':
+    #     import json
+    #     from django.utils import timezone
+        
+    #     cart_data = json.loads(request.POST.get('cart_data'))
+    #     total_amount = request.POST.get('total_amount')
+        
+    #     # Generate order ID
+    #     order_id = f"ORD{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        
+    #     # Create order
+    #     order = Order.objects.create(
+    #         order_id=order_id,
+    #       

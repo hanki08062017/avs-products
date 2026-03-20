@@ -1,0 +1,619 @@
+{% extends 'seller/seller_base.html' %}
+
+{% block content %}
+<style>
+    .config-container { max-width: 1200px; margin: 0 auto; }
+    h2 { color: #2c3e50; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ecf0f1; }
+    .tab { padding: 10px 20px; cursor: pointer; background: #ecf0f1; border: none; border-radius: 4px 4px 0 0; }
+    .tab.active { background: #3498db; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .add-form { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-weight: bold; margin-bottom: 5px; color: #555; }
+    .form-group input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-primary:hover { background: #2980b9; }
+    table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); table-layout: auto; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; white-space: nowrap; }
+    th { background: #34495e; color: white; }
+    .btn-edit { background: #f39c12; color: white; padding: 5px 15px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-edit:hover { background: #e67e22; }
+    .messages { padding: 12px; margin-bottom: 20px; border-radius: 4px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .edit-row { display: none; }
+    .edit-row.active { display: table-row; background: #f8f9fa; }
+    .table-wrapper { overflow-x: auto; }
+</style>
+
+<div class="config-container">
+    <h2>Configuration</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="messages">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('categories')">Product Categories</button>
+        <button class="tab" onclick="showTab('gst')">GST Details</button>
+        <button class="tab" onclick="showTab('units')">Units of Measurement</button>
+        <button class="tab" onclick="showTab('dzones')">Delivery Zones</button>
+        <button class="tab" onclick="showTab('wslabs')">Weight Slabs</button>
+        <button class="tab" onclick="showTab('dchecker')">Delivery Checker</button>
+    </div>
+    
+    <!-- Categories Tab -->
+    <div id="categories" class="tab-content active">
+        {% if is_admin %}
+        <button class="btn btn-primary" onclick="showAddForm('category')" style="margin-bottom: 20px;">Add Category</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit categories</em></p>
+        {% endif %}
+        
+        <div class="add-form" id="add-form-category" style="display: none;">
+            <h3>Add New Category</h3>
+            <form method="POST" action="{% url 'add_category' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <input type="text" name="category" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sub Category *</label>
+                        <input type="text" name="sub_category" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HSN Code *</label>
+                        <input type="text" name="hsn" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SGST (%) *</label>
+                        <input type="number" step="0.01" name="sgst" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CGST (%) *</label>
+                        <input type="number" step="0.01" name="cgst" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Category</button>
+                <button type="button" class="btn" onclick="hideAddForm('category')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Sub Category</th>
+                    <th>HSN</th>
+                    <th>SGST (%)</th>
+                    <th>CGST (%)</th>
+                    <th>Total GST (%)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr id="row-{{ cat.id }}">
+                    <td>{{ cat.category }}</td>
+                    <td>{{ cat.sub_category }}</td>
+                    <td>{{ cat.hsn }}</td>
+                    <td>{{ cat.sgst }}</td>
+                    <td>{{ cat.cgst }}</td>
+                    <td>{{ cat.gst }}</td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ cat.id }}, 'category')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="edit-{{ cat.id }}" class="edit-row">
+                    <td colspan="7">
+                        <form method="POST" action="{% url 'edit_category' cat.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <input type="text" name="category" value="{{ cat.category }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Sub Category</label>
+                                    <input type="text" name="sub_category" value="{{ cat.sub_category }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>HSN</label>
+                                    <input type="text" name="hsn" value="{{ cat.hsn }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>SGST (%)</label>
+                                    <input type="number" step="0.01" name="sgst" value="{{ cat.sgst }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>CGST (%)</label>
+                                    <input type="number" step="0.01" name="cgst" value="{{ cat.cgst }}" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ cat.id }})">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- GST Details Tab -->
+    <div id="gst" class="tab-content">
+        {% if is_admin %}
+        <button class="btn btn-primary" onclick="showAddForm('gst')" style="margin-bottom: 20px;">Add GST Details</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit GST details</em></p>
+        {% endif %}
+        
+        <div class="add-form" id="add-form-gst" style="display: none;">
+            <h3>Add GST Details</h3>
+            <form method="POST" action="{% url 'add_gst' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>GST Number *</label>
+                        <input type="text" name="gst_number" maxlength="15" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PAN *</label>
+                        <input type="text" name="pan" maxlength="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Registration Date *</label>
+                        <input type="date" name="reg_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valid Till *</label>
+                        <input type="date" name="valid_till" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Address *</label>
+                        <input type="text" name="address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>City *</label>
+                        <input type="text" name="city" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PIN *</label>
+                        <input type="text" name="pin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Country *</label>
+                        <input type="text" name="country" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add GST Details</button>
+                <button type="button" class="btn" onclick="hideAddForm('gst')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>GST Number</th>
+                    <th>PAN</th>
+                    <th>Reg Date</th>
+                    <th>Valid Till</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>PIN</th>
+                    <th>Country</th>
+                    <th>Created At</th>
+                    <th>Created By</th>
+                    <th>Modified At</th>
+                    <th>Modified By</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gst in gst_details %}
+                <tr id="row-gst-{{ gst.serial_no }}">
+                    <td>{{ gst.gst_number }}</td>
+                    <td>{{ gst.pan }}</td>
+                    <td>{{ gst.reg_date }}</td>
+                    <td>{{ gst.valid_till }}</td>
+                    <td>{{ gst.address }}</td>
+                    <td>{{ gst.city }}</td>
+                    <td>{{ gst.pin }}</td>
+                    <td>{{ gst.country }}</td>
+                    <td>{{ gst.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ gst.created_by|default:"N/A" }}</td>
+                    <td>{{ gst.modified_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ gst.modified_by|default:"N/A" }}</td>
+                    <td>{{ gst.status }}</td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ gst.serial_no }}, 'gst')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="edit-gst-{{ gst.serial_no }}" class="edit-row">
+                    <td colspan="14">
+                        <form method="POST" action="{% url 'edit_gst' gst.serial_no %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>GST Number</label>
+                                    <input type="text" name="gst_number" value="{{ gst.gst_number }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>PAN</label>
+                                    <input type="text" name="pan" value="{{ gst.pan }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Registration Date</label>
+                                    <input type="date" name="reg_date" value="{{ gst.reg_date|date:'Y-m-d' }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Valid Till</label>
+                                    <input type="date" name="valid_till" value="{{ gst.valid_till|date:'Y-m-d' }}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <input type="text" name="address" value="{{ gst.address }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>City</label>
+                                    <input type="text" name="city" value="{{ gst.city }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>PIN</label>
+                                    <input type="text" name="pin" value="{{ gst.pin }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Country</label>
+                                    <input type="text" name="country" value="{{ gst.country }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select name="status" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="Active" {% if gst.status == 'Active' %}selected{% endif %}>Active</option>
+                                        <option value="Inactive" {% if gst.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ gst.serial_no }}, 'gst')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Units Tab -->
+    <div id="units" class="tab-content">
+        {% if is_admin %}
+        <button class="btn btn-primary" onclick="showAddForm('unit')" style="margin-bottom: 20px;">Add Unit</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit units</em></p>
+        {% endif %}
+        
+        <div class="add-form" id="add-form-unit" style="display: none;">
+            <h3>Add New Unit</h3>
+            <form method="POST" action="{% url 'add_unit' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Unit Name *</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Abbreviation *</label>
+                        <input type="text" name="abbreviation" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Unit</button>
+                <button type="button" class="btn" onclick="hideAddForm('unit')">Cancel</button>
+            </form>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Unit Name</th>
+                    <th>Abbreviation</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for unit in units %}
+                <tr id="row-unit-{{ unit.id }}">
+                    <td>{{ unit.name }}</td>
+                    <td>{{ unit.abbreviation }}</td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn-edit" onclick="editRow({{ unit.id }}, 'unit')">Edit</button>
+                        {% else %}
+                        <span style="color: #95a5a6;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr id="edit-unit-{{ unit.id }}" class="edit-row">
+                    <td colspan="3">
+                        <form method="POST" action="{% url 'edit_unit' unit.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Unit Name</label>
+                                    <input type="text" name="name" value="{{ unit.name }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Abbreviation</label>
+                                    <input type="text" name="abbreviation" value="{{ unit.abbreviation }}" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ unit.id }}, 'unit')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Delivery Zones Tab -->
+    <div id="dzones" class="tab-content">
+
+        <!-- Store Settings -->
+        <div class="add-form" style="margin-bottom: 20px;">
+            <h3>Store Address</h3>
+            <div id="delivery-settings-view">
+                <table style="width:auto;box-shadow:none;">
+                    <tbody>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Address</td><td style="padding:6px 0;">{{ delivery_settings.store_address|default:"-" }}</td></tr>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Area / Zone</td><td style="padding:6px 0;">{{ delivery_settings.store_area|default:"-" }}</td></tr>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">City</td><td style="padding:6px 0;">{{ delivery_settings.store_city|default:"-" }}</td></tr>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">PIN</td><td style="padding:6px 0;">{{ delivery_settings.store_pin|default:"-" }}</td></tr>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Min Amount For Free Delivery (&#8377;)</td><td style="padding:6px 0;">{{ delivery_settings.min_amount_free_delivery|default:"0" }}</td></tr>
+                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Max Distance Delivery (km)</td><td style="padding:6px 0;">{{ delivery_settings.max_distance_km|default:"0" }}</td></tr>
+                    </tbody>
+                </table>
+                {% if is_admin %}<button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('delivery-settings-view').style.display='none';document.getElementById('delivery-settings-form').style.display='block';">Edit</button>{% endif %}
+            </div>
+            <div id="delivery-settings-form" style="display:none;">
+            <form method="POST" action="{% url 'save_delivery_settings' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group"><label>Address</label><input type="text" name="store_address" value="{{ delivery_settings.store_address|default:'' }}"></div>
+                    <div class="form-group"><label>Area / Zone</label><input type="text" name="store_area" value="{{ delivery_settings.store_area|default:'' }}"></div>
+                    <div class="form-group"><label>City</label><input type="text" name="store_city" value="{{ delivery_settings.store_city|default:'' }}"></div>
+                    <div class="form-group"><label>PIN</label><input type="text" name="store_pin" value="{{ delivery_settings.store_pin|default:'' }}"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Min Amount For Free Delivery (&#8377;)</label><input type="number" step="0.01" name="min_amount_free_delivery" value="{{ delivery_settings.min_amount_free_delivery|default:0 }}"></div>
+                    <div class="form-group"><label>Max Distance Delivery (km)</label><input type="number" step="0.01" name="max_distance_km" value="{{ delivery_settings.max_distance_km|default:0 }}"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <button type="button" class="btn" onclick="document.getElementById('delivery-settings-form').style.display='none';document.getElementById('delivery-settings-view').style.display='block';">Cancel</button>
+            </form>
+            </div>
+        </div>
+
+        <!-- Delivery Zones -->
+        {% if is_admin %}
+        <button class="btn btn-primary" onclick="showAddForm('dzone')" style="margin-bottom: 20px;">Add Delivery Zone</button>
+        {% endif %}
+
+        <div class="add-form" id="add-form-dzone" style="display: none;">
+            <h3>Add Delivery Zone</h3>
+            <form method="POST" action="{% url 'add_delivery_zone' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group"><label>Zone Name *</label><input type="text" name="zone_name" required></div>
+                    <div class="form-group"><label>PIN To *</label><input type="text" name="pincode_to" required></div>
+                    <div class="form-group"><label>Distance Range (km)</label><input type="number" step="0.01" name="distance_range_km"></div>
+                    <div class="form-group"><label>Base Charge (₹) *</label><input type="number" step="0.01" name="base_charge" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Zone</button>
+                <button type="button" class="btn" onclick="hideAddForm('dzone')">Cancel</button>
+            </form>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr>
+                    <th>Zone Name</th><th>PIN To</th><th>Distance Range (km)</th><th>Base Charge (₹)</th><th>Status</th><th>Action</th>
+                </tr></thead>
+                <tbody>
+                {% for dz in delivery_zones %}
+                <tr id="row-dzone-{{ dz.id }}">
+                    <td>{{ dz.zone_name }}</td><td>{{ dz.pincode_to }}</td>
+                    <td>{{ dz.distance_range_km|default:"-" }}</td><td>₹{{ dz.base_charge }}</td>
+                    <td>{{ dz.status }}</td>
+                    <td>{% if is_admin %}<button class="btn-edit" onclick="editRow({{ dz.id }}, 'dzone')">Edit</button>{% else %}-{% endif %}</td>
+                </tr>
+                <tr id="edit-dzone-{{ dz.id }}" class="edit-row">
+                    <td colspan="6">
+                        <form method="POST" action="{% url 'edit_delivery_zone' dz.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group"><label>Zone Name</label><input type="text" name="zone_name" value="{{ dz.zone_name }}" required></div>
+                                <div class="form-group"><label>PIN To</label><input type="text" name="pincode_to" value="{{ dz.pincode_to }}" required></div>
+                                <div class="form-group"><label>Distance Range (km)</label><input type="number" step="0.01" name="distance_range_km" value="{{ dz.distance_range_km }}"></div>
+                                <div class="form-group"><label>Base Charge (₹)</label><input type="number" step="0.01" name="base_charge" value="{{ dz.base_charge }}" required></div>
+                                <div class="form-group"><label>Status</label>
+                                    <select name="status" style="padding:8px;border:1px solid #ddd;border-radius:4px;">
+                                        <option value="Active" {% if dz.status == 'Active' %}selected{% endif %}>Active</option>
+                                        <option value="Inactive" {% if dz.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ dz.id }}, 'dzone')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Weight Slabs Tab -->
+    <div id="wslabs" class="tab-content">
+        {% if is_admin %}
+        <button class="btn btn-primary" onclick="showAddForm('wslab')" style="margin-bottom: 20px;">Add Weight Slab</button>
+        {% else %}
+        <p style="color: #7f8c8d; margin-bottom: 20px;"><em>Read-only mode: Only admins can add or edit weight slabs</em></p>
+        {% endif %}
+
+        <div class="add-form" id="add-form-wslab" style="display: none;">
+            <h3>Add Weight Slab</h3>
+            <form method="POST" action="{% url 'add_weight_slab' %}">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group"><label>Slab Name *</label><input type="text" name="slab_name" required></div>
+                    <div class="form-group"><label>Weight From (kg) *</label><input type="number" step="0.01" name="weight_from_kg" required></div>
+                    <div class="form-group"><label>Weight To (kg) *</label><input type="number" step="0.01" name="weight_to_kg" required></div>
+                    <div class="form-group"><label>Extra Charge (₹) *</label><input type="number" step="0.01" name="extra_charge" required></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Slab</button>
+                <button type="button" class="btn" onclick="hideAddForm('wslab')">Cancel</button>
+            </form>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr>
+                    <th>Slab Name</th><th>Weight From (kg)</th><th>Weight To (kg)</th><th>Extra Charge (₹)</th><th>Status</th><th>Action</th>
+                </tr></thead>
+                <tbody>
+                {% for ws in weight_slabs %}
+                <tr id="row-wslab-{{ ws.id }}">
+                    <td>{{ ws.slab_name }}</td><td>{{ ws.weight_from_kg }}</td><td>{{ ws.weight_to_kg }}</td>
+                    <td>₹{{ ws.extra_charge }}</td><td>{{ ws.status }}</td>
+                    <td>{% if is_admin %}<button class="btn-edit" onclick="editRow({{ ws.id }}, 'wslab')">Edit</button>{% else %}-{% endif %}</td>
+                </tr>
+                <tr id="edit-wslab-{{ ws.id }}" class="edit-row">
+                    <td colspan="6">
+                        <form method="POST" action="{% url 'edit_weight_slab' ws.id %}">
+                            {% csrf_token %}
+                            <div class="form-row">
+                                <div class="form-group"><label>Slab Name</label><input type="text" name="slab_name" value="{{ ws.slab_name }}" required></div>
+                                <div class="form-group"><label>Weight From (kg)</label><input type="number" step="0.01" name="weight_from_kg" value="{{ ws.weight_from_kg }}" required></div>
+                                <div class="form-group"><label>Weight To (kg)</label><input type="number" step="0.01" name="weight_to_kg" value="{{ ws.weight_to_kg }}" required></div>
+                                <div class="form-group"><label>Extra Charge (₹)</label><input type="number" step="0.01" name="extra_charge" value="{{ ws.extra_charge }}" required></div>
+                                <div class="form-group"><label>Status</label>
+                                    <select name="status" style="padding:8px;border:1px solid #ddd;border-radius:4px;">
+                                        <option value="Active" {% if ws.status == 'Active' %}selected{% endif %}>Active</option>
+                                        <option value="Inactive" {% if ws.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn" onclick="cancelEdit({{ ws.id }}, 'wslab')">Cancel</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Delivery Checker Tab -->
+    <div id="dchecker" class="tab-content">
+        <div class="add-form">
+            <h3>Check Delivery Charge</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Ship-to Pincode *</label><input type="text" id="check-pincode" placeholder="e.g. 560001"></div>
+                <div class="form-group"><label>Weight (kg) *</label><input type="number" step="0.01" id="check-weight" placeholder="e.g. 1.5"></div>
+                <div class="form-group" style="justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="checkDelivery()" style="margin-top: 22px;">Check</button>
+                </div>
+            </div>
+            <div id="checker-result" style="margin-top: 15px; display: none;">
+                <table>
+                    <thead><tr><th>Zone</th><th>Distance (km)</th><th>Base Charge</th><th>Weight Extra</th><th>Total Charge</th><th>Est. Days</th></tr></thead>
+                    <tbody><tr>
+                        <td id="res-zone"></td><td id="res-distance"></td><td id="res-base"></td>
+                        <td id="res-extra"></td><td id="res-total"></td><td id="res-days"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+            <div id="checker-error" style="margin-top: 15px; color: #e74c3c; display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+    }
+    
+    function editRow(id, type) {
+        const prefix = type === 'unit' ? 'unit-' : type === 'gst' ? 'gst-' : type === 'dzone' ? 'dzone-' : type === 'wslab' ? 'wslab-' : '';
+        document.getElementById('row-' + prefix + id).style.display = 'none';
+        document.getElementById('edit-' + prefix + id).classList.add('active');
+    }
+
+    function cancelEdit(id, type = 'category') {
+        const prefix = type === 'unit' ? 'unit-' : type === 'gst' ? 'gst-' : type === 'dzone' ? 'dzone-' : type === 'wslab' ? 'wslab-' : '';
+        document.getElementById('row-' + prefix + id).style.display = 'table-row';
+        document.getElementById('edit-' + prefix + id).classList.remove('active');
+    }
+
+    function checkDelivery() {
+        const pincode = document.getElementById('check-pincode').value.trim();
+        const weight = document.getElementById('check-weight').value.trim();
+        const result = document.getElementById('checker-result');
+        const error = document.getElementById('checker-error');
+        result.style.display = 'none'; error.style.display = 'none';
+        if (!pincode || !weight) { error.textContent = 'Please enter pincode and weight.'; error.style.display = 'block'; return; }
+        fetch(`{% url 'check_delivery_charge' %}?ship_pin=${pincode}&weight=${weight}`, {credentials: 'same-origin'})
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) { error.textContent = d.error || 'Not found.'; error.style.display = 'block'; return; }
+                document.getElementById('res-zone').textContent = d.zone_name;
+                document.getElementById('res-distance').textContent = d.distance_range || '-';
+                document.getElementById('res-base').textContent = '\u20b9' + d.base_charge;
+                document.getElementById('res-extra').textContent = '\u20b9' + d.weight_charge;
+                document.getElementById('res-total').textContent = '\u20b9' + d.total_charge;
+                document.getElementById('res-days').textContent = d.estimated_days;
+                result.style.display = 'block';
+            })
+            .catch(() => { error.textContent = 'Error checking delivery.'; error.style.display = 'block'; });
+    }
+    
+    function showAddForm(type) {
+        document.getElementById('add-form-' + type).style.display = 'block';
+    }
+    
+    function hideAddForm(type) {
+        document.getElementById('add-form-' + type).style.display = 'none';
+    }
+</script>
+{% endblock %}

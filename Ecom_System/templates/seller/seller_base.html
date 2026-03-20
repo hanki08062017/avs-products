@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVS Products Seller</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #ecf0f1; }
+        nav { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; transition: top 0.3s; }
+        nav h1 { font-size: 1.5rem; }
+        nav ul { list-style: none; display: flex; gap: 2rem; align-items: center; }
+        nav a { color: white; text-decoration: none; }
+        nav a:hover { color: #3498db; }
+        .menu-item { position: relative; }
+        .submenu { display: none; position: absolute; top: 100%; left: 0; background: #34495e; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 4px; z-index: 1000; }
+        .menu-item:hover .submenu { display: block; }
+        .submenu a { display: block; padding: 10px 15px; color: white; border-bottom: 1px solid #2c3e50; }
+        .submenu a:hover { background: #2c3e50; }
+        .submenu a:last-child { border-bottom: none; }
+        .user-profile { position: relative; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #34495e; border-radius: 4px; cursor: pointer; }
+        .user-profile:hover { background: #2c3e50; }
+        .dropdown { display: none; position: absolute; top: 100%; right: 0; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border-radius: 4px; min-width: 200px; z-index: 1000; }
+        .user-profile:hover .dropdown, .dropdown:hover { display: block; }
+        .dropdown a { display: block; padding: 0.75rem 1rem; color: #2c3e50; border-bottom: 1px solid #ecf0f1; }
+        .dropdown a:hover { background: #ecf0f1; }
+        .dropdown a:last-child { border-bottom: none; }
+        main { padding: 2rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div style="display: flex; align-items: center; gap: 2rem;">
+            <h1>AVS Products Seller</h1>
+            <ul style="margin: 0;">
+                <li><a href="{% url 'seller_dashboard' %}">Dashboard</a></li>
+                <li><a href="{% url 'config' %}">Config</a></li>
+                <li><a href="#">Contact Us</a></li>
+            </ul>
+        </div>
+        {% if staff_info %}
+        <div class="user-profile">
+            {{ staff_info.name }} - {{ staff_info.staff_id }}
+            <div class="dropdown">
+                <a href="{% url 'seller_profile' user.username  %}">My Profile</a>
+                <a href="{% url 'staff_logout' %}">Logout</a>
+            </div>
+        </div>
+        {% endif %}
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <script>
+        let lastScrollY = 0;
+        const nav = document.querySelector('nav');
+        window.addEventListener('scroll', function() {
+            const navH = nav.offsetHeight;
+            if (window.scrollY > lastScrollY && window.scrollY > navH) {
+                nav.style.top = '-' + navH + 'px';
+                document.documentElement.style.setProperty('--nav-top', '0px');
+            } else {
+                nav.style.top = '0';
+                document.documentElement.style.setProperty('--nav-top', navH + 'px');
+            }
+            lastScrollY = window.scrollY;
+        });
+        document.documentElement.style.setProperty('--nav-top', nav.offsetHeight + 'px');
+    </script>
+</body>
+</html>
