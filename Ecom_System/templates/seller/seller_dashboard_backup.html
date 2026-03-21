@@ -1219,8 +1219,6 @@ window.addEventListener('DOMContentLoaded', function() {
 <!-- Add Stock Modal -->
 <div id="addStockModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:8px; padding:2rem; width:420px; max-width:95vw; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
-        <div id="stockMsg" style="margin-bottom:1rem; display:none; font-size:14px;"></div>
-        <div id="stockSelectedInfoUpdate" style="display:none; margin-bottom:1rem; padding:8px 12px; background:#f0f8ff; border-radius:4px; color:#2c3e50; font-size:14px;"></div>
         <h3 style="margin:0 0 1.5rem; color:#2c3e50;">Add Stock</h3>
         <div style="margin-bottom:1rem; position:relative;">
             <label style="font-weight:bold; color:#555; display:block; margin-bottom:5px;">Product</label>
@@ -1234,7 +1232,7 @@ window.addEventListener('DOMContentLoaded', function() {
             <label style="font-weight:bold; color:#555; display:block; margin-bottom:5px;">Add Stock Quantity</label>
             <input type="number" id="stockQtyInput" min="1" placeholder="Enter quantity" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; box-sizing:border-box;">
         </div>
-        
+        <div id="stockMsg" style="margin-bottom:1rem; display:none; font-size:14px;"></div>
         <div style="display:flex; gap:0.5rem;">
             <button onclick="submitAddStock()" style="background:#27ae60; color:white; padding:9px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px; flex:1;">Save</button>
             <button onclick="closeAddStockModal()" style="background:#95a5a6; color:white; padding:9px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">Cancel</button>
@@ -1245,7 +1243,7 @@ window.addEventListener('DOMContentLoaded', function() {
 <script>
 const ALL_PRODUCTS = [
     {% for product in products %}
-    {id: "{{ product.id }}", name: "{{ product.product_name|escapejs }} - {{ product.quantity }}{{ product.unit|escapejs }}", label: "{{ product.product_name|escapejs }}", stock: {{ product.stock|default:0 }}},
+    {id: {{ product.id }}, name: "{{ product.product_name|escapejs }} - {{ product.quantity }}{{ product.unit }}", stock: {{ product.stock }}},
     {% endfor %}
 ];
 let selectedStockProductId = null;
@@ -1255,7 +1253,7 @@ function filterStockProducts(q) {
     selectedStockProductId = null;
     document.getElementById('stockSelectedInfo').style.display = 'none';
     if (!q.trim()) { dd.style.display = 'none'; return; }
-    const filtered = ALL_PRODUCTS.filter(p => p.label.toLowerCase().includes(q.toLowerCase()));
+    const filtered = ALL_PRODUCTS.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
     if (!filtered.length) { dd.innerHTML = '<div style="padding:8px 12px; color:#999;">No products found</div>'; dd.style.display = 'block'; return; }
     dd.innerHTML = filtered.map(p =>
         `<div data-id="${p.id}" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0;">${p.name} <span style="color:#888; font-size:0.85em;">(Stock: ${p.stock})</span></div>`
@@ -1264,7 +1262,7 @@ function filterStockProducts(q) {
     dd.querySelectorAll('div[data-id]').forEach(item => {
         item.addEventListener('mousedown', function(e) {
             e.preventDefault();
-            pickStockProduct(this.dataset.id);
+            pickStockProduct(parseInt(this.dataset.id));
         });
     });
 }
@@ -1301,12 +1299,8 @@ function submitAddStock() {
             const p = ALL_PRODUCTS.find(x => x.id === selectedStockProductId);
             if (p) p.stock = data.new_stock;
             msg.style.display='block'; msg.style.color='green';
-            msg.textContent = data.product_name + ' stock ' + qty + ' Added Successfully. Stock Updated to ' + data.new_stock + '.';
-            const info = document.getElementById('stockSelectedInfoUpdate');
-            info.textContent = p.name + ' — Current Stock: ' + data.new_stock;
-            info.style.display = 'block';
-            const old_info = document.getElementById('stockSelectedInfo');
-            old_info.style.display = 'None';
+            msg.textContent = data.product_name + ' stock updated to ' + data.new_stock + '.';
+            document.getElementById('stockSelectedInfo').textContent = p.name + ' — Current Stock: ' + data.new_stock;
             document.getElementById('stockQtyInput').value = '';
             document.getElementById('stockProductSearch').value = '';
             selectedStockProductId = null;

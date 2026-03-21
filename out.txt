@@ -1,0 +1,8 @@
+filterStockProducts(q) {
+    const dd = document.getElementById('stockDropdown');
+    selectedStockProductId = null;
+    document.getElementById('stockSelectedInfo').style.display = 'none';
+    if (!q.trim()) { dd.style.display = 'none'; return; }
+    const filtered = ALL_PRODUCTS.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+    if (!filtered.length) { dd.innerHTML = '<div style="padding:8px 12px; color:#999;">No products found</div>'; dd.style.display = 'block'; return; }
+    dd

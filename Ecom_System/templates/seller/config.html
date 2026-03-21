@@ -13,7 +13,7 @@
     .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-weight: bold; margin-bottom: 5px; color: #555; }
-    .form-group input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .form-group input, .form-group select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
     .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
     .btn-primary { background: #3498db; color: white; }
     .btn-primary:hover { background: #2980b9; }
@@ -384,38 +384,88 @@
     <!-- Delivery Zones Tab -->
     <div id="dzones" class="tab-content">
 
-        <!-- Store Settings -->
+        <!-- Store Address -->
         <div class="add-form" style="margin-bottom: 20px;">
             <h3>Store Address</h3>
-            <div id="delivery-settings-view">
-                <table style="width:auto;box-shadow:none;">
+            <div class="table-wrapper" id="store-address-view">
+                <table>
+                    <thead>
+                       <tr>
+                            <th>Address</th>
+                            <th>Area / Zone</th>
+                            <th>City</th>
+                            <th>PIN</th>
+                            
+                       </tr>
+                    </thead>
                     <tbody>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Address</td><td style="padding:6px 0;">{{ delivery_settings.store_address|default:"-" }}</td></tr>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Area / Zone</td><td style="padding:6px 0;">{{ delivery_settings.store_area|default:"-" }}</td></tr>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">City</td><td style="padding:6px 0;">{{ delivery_settings.store_city|default:"-" }}</td></tr>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">PIN</td><td style="padding:6px 0;">{{ delivery_settings.store_pin|default:"-" }}</td></tr>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Min Amount For Free Delivery (&#8377;)</td><td style="padding:6px 0;">{{ delivery_settings.min_amount_free_delivery|default:"0" }}</td></tr>
-                        <tr><td style="color:#555;font-weight:bold;padding:6px 20px 6px 0;">Max Distance Delivery (km)</td><td style="padding:6px 0;">{{ delivery_settings.max_distance_km|default:"0" }}</td></tr>
+                        <tr>
+                            <td>{{ delivery_settings.store_address|default:"-" }}</td>
+                            <td>{{ delivery_settings.store_area|default:"-" }}</td>
+                            <td>{{ delivery_settings.store_city|default:"-" }}</td>
+                            <td>{{ delivery_settings.store_pin|default:"-" }}</td>
+                        </tr>
+                            
+                    </tbody>
+                </table>
+                {% if is_admin %}<button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('store-address-view').style.display='none';document.getElementById('store-address-form').style.display='block';">Edit</button>{% endif %}
+            </div>
+            <div id="store-address-form" style="display:none;">
+                <form method="POST" action="{% url 'save_delivery_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="store_address">
+                    <div class="form-row">
+                        <div class="form-group"><label>Address</label><input type="text" name="store_address" value="{{ delivery_settings.store_address|default:'' }}"></div>
+                        <div class="form-group"><label>Area / Zone</label><input type="text" name="store_area" value="{{ delivery_settings.store_area|default:'' }}"></div>
+                        <div class="form-group"><label>City</label><input type="text" name="store_city" value="{{ delivery_settings.store_city|default:'' }}"></div>
+                        <div class="form-group"><label>PIN</label><input type="text" name="store_pin" value="{{ delivery_settings.store_pin|default:'' }}"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn" onclick="document.getElementById('store-address-form').style.display='none';document.getElementById('store-address-view').style.display='block';">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delivery Settings -->
+        <div class="add-form" style="margin-bottom: 20px;">
+            <h3>Delivery Settings</h3>
+                <div class="table-wrapper" id="delivery-settings-view">
+                <table>
+                    <thead>
+                       <tr>
+                            <th>Min Amount for Free Delivery</th>
+                            <th>Delivery Free ?</th>
+                            <th>Ship Free ?</th>
+                            <th>Max Distance Delivery</th>
+                            
+                       </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>₹{{ delivery_settings.min_amount_free_delivery|default:"0" }}</td>
+                            <td>{% if delivery_settings.delivery_free %}Yes{% else %}No{% endif %}</td>
+                            <td>{% if delivery_settings.ship_free %}Yes{% else %}No{% endif %}</td>
+                            <td>{{ delivery_settings.max_distance_km|default:"0" }} km</td>
+                        </tr>
+                            
                     </tbody>
                 </table>
                 {% if is_admin %}<button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('delivery-settings-view').style.display='none';document.getElementById('delivery-settings-form').style.display='block';">Edit</button>{% endif %}
             </div>
             <div id="delivery-settings-form" style="display:none;">
-            <form method="POST" action="{% url 'save_delivery_settings' %}">
-                {% csrf_token %}
-                <div class="form-row">
-                    <div class="form-group"><label>Address</label><input type="text" name="store_address" value="{{ delivery_settings.store_address|default:'' }}"></div>
-                    <div class="form-group"><label>Area / Zone</label><input type="text" name="store_area" value="{{ delivery_settings.store_area|default:'' }}"></div>
-                    <div class="form-group"><label>City</label><input type="text" name="store_city" value="{{ delivery_settings.store_city|default:'' }}"></div>
-                    <div class="form-group"><label>PIN</label><input type="text" name="store_pin" value="{{ delivery_settings.store_pin|default:'' }}"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Min Amount For Free Delivery (&#8377;)</label><input type="number" step="0.01" name="min_amount_free_delivery" value="{{ delivery_settings.min_amount_free_delivery|default:0 }}"></div>
-                    <div class="form-group"><label>Max Distance Delivery (km)</label><input type="number" step="0.01" name="max_distance_km" value="{{ delivery_settings.max_distance_km|default:0 }}"></div>
-                </div>
-                <button type="submit" class="btn btn-primary">Save Settings</button>
-                <button type="button" class="btn" onclick="document.getElementById('delivery-settings-form').style.display='none';document.getElementById('delivery-settings-view').style.display='block';">Cancel</button>
-            </form>
+                <form method="POST" action="{% url 'save_delivery_settings' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="delivery_settings">
+                    <div class="form-row">
+                        <div class="form-group"><label>Min Amount for Free Delivery (&#8377;)</label><input type="number" step="0.01" name="min_amount_free_delivery" value="{{ delivery_settings.min_amount_free_delivery|default:0 }}"></div>
+                        <div class="form-group"><label>Delivery Free ?</label><select name="delivery_free"><option value="true" {% if delivery_settings.delivery_free %}selected{% endif %}>Yes</option><option value="false" {% if not delivery_settings.delivery_free %}selected{% endif %}>No</option></select></div>
+                        <div class="form-group"><label>Ship Free ?</label><select name="ship_free"><option value="true" {% if delivery_settings.ship_free %}selected{% endif %}>Yes</option><option value="false" {% if not delivery_settings.ship_free %}selected{% endif %}>No</option></select></div>
+                        <div class="form-group"><label>Max Distance Delivery (km)</label><input type="number" step="0.01" name="max_distance_km" value="{{ delivery_settings.max_distance_km|default:0 }}"></div>
+
+                        </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn" onclick="document.getElementById('delivery-settings-form').style.display='none';document.getElementById('delivery-settings-view').style.display='block';">Cancel</button>
+                </form>
             </div>
         </div>
 

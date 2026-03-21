@@ -218,15 +218,20 @@ def save_delivery_settings(request):
         return redirect('config')
     if request.method == 'POST':
         settings, _ = DeliverySettings.objects.get_or_create(business_code_id=business_code)
-        settings.store_address = request.POST.get('store_address')
-        settings.store_area = request.POST.get('store_area')
-        settings.store_city = request.POST.get('store_city')
-        settings.store_pin = request.POST.get('store_pin')
-        settings.min_amount_free_delivery = request.POST.get('min_amount_free_delivery') or 0
-        settings.max_distance_km = request.POST.get('max_distance_km') or 0
+        form_type = request.POST.get('form_type')
+        if form_type == 'store_address':
+            settings.store_address = request.POST.get('store_address')
+            settings.store_area = request.POST.get('store_area')
+            settings.store_city = request.POST.get('store_city')
+            settings.store_pin = request.POST.get('store_pin')
+        else:
+            settings.min_amount_free_delivery = request.POST.get('min_amount_free_delivery') or 0
+            settings.max_distance_km = request.POST.get('max_distance_km') or 0
+            settings.delivery_free = request.POST.get('delivery_free') == 'true'
+            settings.ship_free = request.POST.get('ship_free') == 'true'
         settings.modified_by = staff.full_name
         settings.save()
-        messages.success(request, 'Delivery settings saved!')
+        messages.success(request, 'Settings saved!')
     return redirect('config')
 
 

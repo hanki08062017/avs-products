@@ -28,6 +28,7 @@ urlpatterns = [
     path('seller/config/add-weight-slab/', add_weight_slab, name='add_weight_slab'),
     path('seller/config/edit-weight-slab/<int:id>/', edit_weight_slab, name='edit_weight_slab'),
     path('seller/config/check-delivery-charge/', check_delivery_charge, name='check_delivery_charge'),
+    path('seller/add-stock/', views.add_stock, name='add_stock'),
     path('seller/add-product/', views.add_product, name='add_product'),
     path('seller/view-product/<str:product_id>/', views.view_product, name='view_product'),
     path('seller/edit-product/<str:product_id>/', views.edit_product, name='edit_product'),

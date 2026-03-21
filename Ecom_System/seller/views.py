@@ -313,6 +313,27 @@ def view_product(request, product_id):
     current_user = StaffUser.objects.get(username=username)
     return render(request, 'seller/view_product.html', {'product': product, 'user': current_user})
 
+
+def add_stock(request):
+    if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
+        return redirect('staff_login')
+    if request.method == 'POST':
+        from django.http import JsonResponse
+        product_id = request.POST.get('product_id')
+        qty = request.POST.get('quantity')
+        try:
+            product = Product.objects.get(id=product_id)
+            product.stock += int(qty)
+            user = StaffUser.objects.get(username=request.session.get('user_id'))
+            product.modified_by = f"{user.first_name} {user.last_name}"
+            from django.utils import timezone
+            product.modified_at = timezone.now()
+            product.save()
+            return JsonResponse({'success': True, 'new_stock': product.stock, 'product_name': product.product_name})
+        except (Product.DoesNotExist, ValueError, TypeError):
+            return JsonResponse({'success': False})
+    return JsonResponse({'success': False})
+
 def manage_orders(request):
     if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
         return redirect('staff_login')
