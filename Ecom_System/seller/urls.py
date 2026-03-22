@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .config_views import config_view, add_category, edit_category, add_unit, edit_unit, add_gst, edit_gst, add_delivery_zone, edit_delivery_zone, add_weight_slab, edit_weight_slab, check_delivery_charge, save_delivery_settings
+from .config_views import config_view, add_category, edit_category, add_unit, edit_unit, add_gst, edit_gst, add_delivery_zone, edit_delivery_zone, save_delivery_settings
 
 
 urlpatterns = [
@@ -25,9 +25,6 @@ urlpatterns = [
     path('seller/config/save-delivery-settings/', save_delivery_settings, name='save_delivery_settings'),
     path('seller/config/add-delivery-zone/', add_delivery_zone, name='add_delivery_zone'),
     path('seller/config/edit-delivery-zone/<int:id>/', edit_delivery_zone, name='edit_delivery_zone'),
-    path('seller/config/add-weight-slab/', add_weight_slab, name='add_weight_slab'),
-    path('seller/config/edit-weight-slab/<int:id>/', edit_weight_slab, name='edit_weight_slab'),
-    path('seller/config/check-delivery-charge/', check_delivery_charge, name='check_delivery_charge'),
     path('seller/add-stock/', views.add_stock, name='add_stock'),
     path('seller/add-product/', views.add_product, name='add_product'),
     path('seller/view-product/<str:product_id>/', views.view_product, name='view_product'),
@@ -42,6 +39,7 @@ urlpatterns = [
     path('seller/add-staff/', views.add_staff, name='add_staff'),
     path('seller/view-staff/<str:staff_id>/', views.view_staff, name='view_staff'),
     path('seller/edit-staff/<str:staff_id>/', views.edit_staff, name='edit_staff'),
+    path('seller/get-report/', views.get_report, name='get_report'),
     path('management/', views.management_dashboard, name='management_dashboard'),
     
     path('delete-address/<int:address_id>/', views.delete_address, name='delete_address'),

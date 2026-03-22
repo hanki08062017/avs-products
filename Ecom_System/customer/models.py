@@ -1,6 +1,12 @@
+import os
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+def _customer_pic_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    name = f"{instance.username.first_name}_{instance.username.last_name}{ext}"
+    return f"customer/{instance.username.username}/{name}"
 
 class Customer(models.Model):
     first_name = models.CharField(max_length=100)
@@ -22,7 +28,7 @@ class Customer(models.Model):
 
 class CustomerProfile(models.Model):
     username = models.OneToOneField(Customer, to_field='username', on_delete=models.CASCADE, related_name='profile')
-    profile_pic = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    profile_pic = models.ImageField(upload_to=_customer_pic_path, blank=True, null=True)
     address1 = models.CharField(max_length=255, blank=True, null=True)
     address2 = models.CharField(max_length=255, blank=True, null=True)
     address3 = models.CharField(max_length=255, blank=True, null=True)

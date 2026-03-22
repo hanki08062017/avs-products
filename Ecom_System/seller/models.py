@@ -1,7 +1,13 @@
+import os
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from management.models import BusinessDetail
+
+def _staff_pic_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    name = f"{instance.username.first_name}_{instance.username.last_name}{ext}"
+    return f"seller/{instance.username.username}/{name}"
 
 # Create your models here.
 class StaffUser(models.Model):
@@ -33,7 +39,7 @@ class StaffUser(models.Model):
 
 class StaffUserProfile(models.Model):
     username = models.OneToOneField(StaffUser, to_field='username', on_delete=models.CASCADE, related_name='profile')
-    profile_pic = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    profile_pic = models.ImageField(upload_to=_staff_pic_path, blank=True, null=True)
     address1 = models.CharField(max_length=255, blank=True, null=True)
     address2 = models.CharField(max_length=255, blank=True, null=True)
     address3 = models.CharField(max_length=255, blank=True, null=True)
@@ -43,6 +49,11 @@ class StaffUserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     phone1 = models.CharField(max_length=20, blank=True, null=True)
     phone2 = models.CharField(max_length=20, blank=True, null=True)
+    dob = models.DateField(blank=True, null=True)
+    aadhaar_number = models.CharField(max_length=12, blank=True, null=True)
+    aadhaar_attachment = models.FileField(upload_to='staff_kyc/', blank=True, null=True)
+    pan_number = models.CharField(max_length=10, blank=True, null=True)
+    pan_attachment = models.FileField(upload_to='staff_kyc/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     

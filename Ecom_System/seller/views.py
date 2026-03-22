@@ -58,13 +58,26 @@ def seller_profile_view(request, username):
     profile = user.profile
     business_code = request.session.get('business_code')
     staff = Staff.objects.get(username=user, business_code=business_code)
+    is_admin = staff.staff_role in ['Seller-Admin', 'Shop-Admin', 'Admin']
     
     if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update_pic':
+            if request.FILES.get('profile_picture'):
+                profile.profile_pic = request.FILES['profile_picture']
+                profile.save()
+            return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin, 'success': 'Profile picture updated successfully'})
+
+        if not is_admin:
+            return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin, 'error': 'Only admins can edit profile information'})
+
+        # Admin-only: update personal info
         user.first_name = request.POST.get('first_name')
         user.middle_name = request.POST.get('middle_name')
         user.last_name = request.POST.get('last_name')
         user.save()
-        
+
         profile.address1 = request.POST.get('address1')
         profile.address2 = request.POST.get('address2')
         profile.city = request.POST.get('city')
@@ -73,11 +86,18 @@ def seller_profile_view(request, username):
         profile.country = request.POST.get('country')
         profile.phone1 = request.POST.get('phone1')
         profile.phone2 = request.POST.get('phone2')
+        profile.dob = request.POST.get('dob') or None
+        profile.aadhaar_number = request.POST.get('aadhaar_number')
+        profile.pan_number = request.POST.get('pan_number', '').upper()
+        if request.FILES.get('aadhaar_attachment'):
+            profile.aadhaar_attachment = request.FILES['aadhaar_attachment']
+        if request.FILES.get('pan_attachment'):
+            profile.pan_attachment = request.FILES['pan_attachment']
         profile.save()
-        
-        return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'success': 'Profile updated successfully'})
+
+        return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin, 'success': 'Profile updated successfully'})
     
-    return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff})
+    return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin})
         
      
 def seller_dashboard(request):
@@ -87,6 +107,7 @@ def seller_dashboard(request):
     from management.models import Payment
     from seller.models import StaffPrivileges
     from django.core.paginator import Paginator
+    from django.db.models import Sum
     
     business_code = request.session.get('business_code')
     username = request.session.get('user_id')
@@ -149,6 +170,35 @@ def seller_dashboard(request):
     refunds = Refund.objects.filter(reference_order__sold_by=business_code, refund_status='Pending').order_by('-created_at')
     refund_history = Refund.objects.filter(reference_order__sold_by=business_code).exclude(refund_status='Pending').order_by('-modified_at')
     
+    # Dashboard overview stats
+    all_orders = Order.objects.filter(sold_by=business_code)
+    active_orders_count = all_orders.exclude(order_status__in=['Delivered', 'Cancelled']).count()
+    completed_orders_count = all_orders.filter(order_status='Delivered').count()
+    cancelled_orders_count = all_orders.filter(order_status='Cancelled').count()
+    total_revenue = all_orders.filter(order_status='Delivered', payment_status='Successful').aggregate(total=Sum('total_amount'))['total'] or 0
+    pending_payments_count = payments.filter(status='Pending').count()
+    pending_refunds_count = refunds.count()
+    active_products_count = products.filter(status='Active').count()
+    low_stock_count = products.filter(status='Active', stock__lt=5).count()
+    out_of_stock_count = products.filter(status='Active', stock=0).count()
+    active_staff_count = Staff.objects.filter(business_code=business_code, status='Active').count()
+
+    # Report stats
+    from django.db.models import Count, Avg
+    total_orders_all = Order.objects.filter(sold_by=business_code)
+    report_revenue_total = total_orders_all.filter(order_status='Delivered', payment_status='Successful').aggregate(total=models.Sum('total_amount'))['total'] or 0
+    report_avg_order = total_orders_all.filter(order_status='Delivered').aggregate(avg=Avg('total_amount'))['avg'] or 0
+    report_orders_by_status = list(total_orders_all.values('order_status').annotate(c=Count('order_id')).order_by('order_status'))
+    report_orders_by_payment = list(total_orders_all.values('payment_method').annotate(c=Count('order_id')).order_by('payment_method'))
+    report_top_products = list(
+        Product.objects.filter(business_code=business_code, status='Active').order_by('stock')[:5].values('product_name', 'stock', 'selling_price')
+    )
+    report_inactive_products = products.filter(status='Inactive').count()
+    report_total_stock_value = products.filter(status='Active').aggregate(v=models.Sum(models.F('stock') * models.F('selling_price')))['v'] or 0
+    report_staff_by_role = list(Staff.objects.filter(business_code=business_code).values('role').annotate(c=Count('staff_id')))
+    report_refund_total = Refund.objects.filter(reference_order__sold_by=business_code, refund_status='Refunded').aggregate(total=models.Sum('amount'))['total'] or 0
+    report_refund_count = Refund.objects.filter(reference_order__sold_by=business_code).count()
+    
     return render(request, 'seller/seller_dashboard.html', {
         'products': products,
         'orders': orders,
@@ -163,7 +213,27 @@ def seller_dashboard(request):
         'is_admin': is_admin,
         'view_type': view_type,
         'total_count': paginator.count,
-        'user': current_user
+        'user': current_user,
+        'active_orders_count': active_orders_count,
+        'completed_orders_count': completed_orders_count,
+        'cancelled_orders_count': cancelled_orders_count,
+        'total_revenue': total_revenue,
+        'pending_payments_count': pending_payments_count,
+        'pending_refunds_count': pending_refunds_count,
+        'active_products_count': active_products_count,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+        'active_staff_count': active_staff_count,
+        'report_revenue_total': report_revenue_total,
+        'report_avg_order': report_avg_order,
+        'report_orders_by_status': report_orders_by_status,
+        'report_orders_by_payment': report_orders_by_payment,
+        'report_top_products': report_top_products,
+        'report_inactive_products': report_inactive_products,
+        'report_total_stock_value': report_total_stock_value,
+        'report_staff_by_role': report_staff_by_role,
+        'report_refund_total': report_refund_total,
+        'report_refund_count': report_refund_count,
     })
 
 def add_product(request):
@@ -222,7 +292,7 @@ def add_product(request):
                         'success': f'{success_count} products added successfully',
                         'errors': errors
                     })
-                return redirect('/seller/?tab=products')
+                return redirect('/seller/?tab=products#products')
             except Exception as e:
                 return render(request, 'seller/add_product.html', {
                     'categories': ProductCategory.objects.all(),
@@ -255,7 +325,7 @@ def add_product(request):
                 is_primary=(idx == 0)
             )
         
-        return redirect('/seller/?tab=products')
+        return redirect('/seller/?tab=products#products')
     
     categories = ProductCategory.objects.all()
     username = request.session.get('user_id')
@@ -378,6 +448,10 @@ def update_order_status(request, order_id):
                 order.shipped_at = timezone.now()
                 order.shipped_by = modifier_name
                 order.shipped_comments = comments
+                if not order.invoice_no:
+                    from django.db.models import Max
+                    last_invoice = Order.objects.filter(sold_by=order.sold_by).aggregate(Max('invoice_no'))['invoice_no__max'] or 0
+                    order.invoice_no = last_invoice + 1
             elif new_status == 'Delivered':
                 order.delivered_at = timezone.now()
                 order.delivered_by = modifier_name
@@ -499,6 +573,9 @@ def add_staff(request):
     
     # Get business details for symbol and type
     business = BusinessDetail.objects.get(code=business_code)
+    current_user = StaffUser.objects.get(username=username)
+    current_staff = Staff.objects.get(username=current_user, business_code=business_code)
+    is_admin = current_staff.staff_role in ['Seller-Admin', 'Shop-Admin', 'Admin']
     
     # Determine staff role based on business type
     allowed_role = 'Staff'  # Default
@@ -523,17 +600,23 @@ def add_staff(request):
     if request.method == 'POST':
         from seller.models import StaffPrivileges
         staff_role = request.POST.get('staff_role')
-        
-        username_new = request.POST.get('username')
+        first_name = request.POST.get('first_name', '')
+        last_name = request.POST.get('last_name', '')
+        staff_id = request.POST.get('staff_id', '')
+        num_part = ''.join(filter(str.isdigit, staff_id))[-2:].zfill(2)
+        username_new = (last_name[:2] + first_name[:4] + num_part).upper()
+        phone_digits = ''.join(filter(str.isdigit, request.POST.get('phone', '')))
+        auto_password = (first_name[:4] + last_name[:2] + phone_digits[-4:]).lower()
+
         user, created = StaffUser.objects.get_or_create(
             username=username_new,
             defaults={
-                'first_name': request.POST.get('first_name'),
+                'first_name': first_name,
                 'middle_name': request.POST.get('middle_name'),
-                'last_name': request.POST.get('last_name'),
+                'last_name': last_name,
                 'email': request.POST.get('email'),
                 'phone': request.POST.get('phone'),
-                'password': 'default123'
+                'password': auto_password
             }
         )
         
@@ -547,16 +630,26 @@ def add_staff(request):
         profile.pin = request.POST.get('pin')
         profile.country = request.POST.get('country')
         profile.phone2 = request.POST.get('phone2')
+        profile.dob = request.POST.get('dob') or None
+        profile.aadhaar_number = request.POST.get('aadhaar_number')
+        profile.pan_number = request.POST.get('pan_number').upper() if request.POST.get('pan_number') else ''
+        if request.FILES.get('aadhaar_attachment'):
+            profile.aadhaar_attachment = request.FILES['aadhaar_attachment']
+        if request.FILES.get('pan_attachment'):
+            profile.pan_attachment = request.FILES['pan_attachment']
         profile.save()
         
         staff = Staff.objects.create(
             username=user,
             staff_id=request.POST.get('staff_id'),
             business_code_id=business_code,
-            staff_role=staff_role,
+            role=staff_role,
             phone=request.POST.get('phone'),
             created_by=username
         )
+        
+        # Send SMS with password only (no username/seller code)
+        print(f"[SMS to {request.POST.get('phone')}] Welcome to AVS! Your login password is: {auto_password}")
         
         # Create privileges for staff - Seller-Admin gets all privileges by default
         if staff_role == 'Admin':
@@ -576,13 +669,13 @@ def add_staff(request):
                 manage_payments=request.POST.get('manage_payments') == 'on'
             )
         
-        return redirect('seller_dashboard')
+        return redirect('/seller/?tab=staff#staff')
     
     return render(request, 'seller/add_staff.html', {
         'business_code': business_code,
-        'allowed_role': allowed_role,
         'auto_staff_id': auto_staff_id,
         'business_type': business.business_type,
+        'is_admin': is_admin,
         'user': StaffUser.objects.get(username=request.session.get('user_id'))
     })
 
@@ -633,10 +726,10 @@ def edit_staff(request, staff_id):
         
         # Update Staff details
         staff.phone = request.POST.get('phone')
-        staff.staff_role = request.POST.get('staff_role')
+        staff.role = request.POST.get('staff_role')
         
         # Admin cannot change own status
-        if not (is_editing_self and staff.staff_role in ['Admin']):
+        if not (is_editing_self and staff.role in ['Admin']):
             staff.status = request.POST.get('status')
         
         staff.modified_by = request.session.get('user_id')
@@ -652,10 +745,17 @@ def edit_staff(request, staff_id):
         profile.pin = request.POST.get('pin')
         profile.country = request.POST.get('country')
         profile.phone2 = request.POST.get('phone2')
+        profile.dob = request.POST.get('dob') or None
+        profile.aadhaar_number = request.POST.get('aadhaar_number')
+        profile.pan_number = request.POST.get('pan_number').upper() if request.POST.get('pan_number') else ''
+        if request.FILES.get('aadhaar_attachment'):
+            profile.aadhaar_attachment = request.FILES['aadhaar_attachment']
+        if request.FILES.get('pan_attachment'):
+            profile.pan_attachment = request.FILES['pan_attachment']
         profile.save()
         
         # Update privileges - Seller-Admin always has all privileges
-        if staff.staff_role == 'Admin':
+        if staff.role == 'Admin':
             privileges.manage_orders = True
             privileges.manage_products = True
             privileges.manage_reports = True
@@ -677,6 +777,104 @@ def edit_staff(request, staff_id):
         'business_code': business_code,
         'user': current_user
     })
+
+def get_report(request):
+    if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
+        return JsonResponse({'success': False})
+
+    from management.models import Refund
+    from django.db.models import Sum, Count
+
+    business_code = request.session.get('business_code')
+    report_type = request.GET.get('report_type')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    try:
+        from django.utils.dateparse import parse_date
+        from datetime import datetime, time
+        import pytz
+        from django.utils import timezone
+
+        def make_dt(d, end=False):
+            t = time.max if end else time.min
+            return timezone.make_aware(datetime.combine(parse_date(d), t))
+
+        rows = []
+        summary = {}
+
+        if report_type == 'orders':
+            status_filter = request.GET.get('status', '')
+            qs = Order.objects.filter(sold_by=business_code)
+            if date_from: qs = qs.filter(created_at__gte=make_dt(date_from))
+            if date_to:   qs = qs.filter(created_at__lte=make_dt(date_to, end=True))
+            if status_filter: qs = qs.filter(order_status=status_filter)
+            qs = qs.order_by('-created_at')
+            summary = {
+                'total': qs.count(),
+                'revenue': str(qs.filter(order_status='Delivered', payment_status='Successful').aggregate(t=Sum('total_amount'))['t'] or 0)
+            }
+            rows = list(qs.values('order_id', 'customer_name', 'total_amount', 'payment_method', 'payment_status', 'order_status', 'created_at'))
+            for r in rows:
+                r['created_at'] = r['created_at'].strftime('%d %b %Y, %I:%M %p')
+                r['total_amount'] = str(r['total_amount'])
+
+        elif report_type == 'sales':
+            qs = Order.objects.filter(sold_by=business_code, order_status='Delivered', payment_status='Successful')
+            if date_from: qs = qs.filter(delivered_at__gte=make_dt(date_from))
+            if date_to:   qs = qs.filter(delivered_at__lte=make_dt(date_to, end=True))
+            qs = qs.order_by('-delivered_at')
+            total = qs.aggregate(t=Sum('total_amount'))['t'] or 0
+            summary = {'total_orders': qs.count(), 'total_revenue': str(total)}
+            rows = list(qs.values('order_id', 'customer_name', 'total_amount', 'payment_method', 'delivered_at'))
+            for r in rows:
+                r['delivered_at'] = r['delivered_at'].strftime('%d %b %Y') if r['delivered_at'] else '-'
+                r['total_amount'] = str(r['total_amount'])
+
+        elif report_type == 'payments':
+            from management.models import Payment
+            status_filter = request.GET.get('status', '')
+            qs = Payment.objects.filter(reference_order__sold_by=business_code)
+            if date_from: qs = qs.filter(created_at__gte=make_dt(date_from))
+            if date_to:   qs = qs.filter(created_at__lte=make_dt(date_to, end=True))
+            if status_filter: qs = qs.filter(status=status_filter)
+            qs = qs.order_by('-created_at')
+            summary = {'total': qs.count(), 'amount': str(qs.aggregate(t=Sum('amount'))['t'] or 0)}
+            rows = list(qs.values('transaction_id', 'amount', 'payment_mode', 'transaction_type', 'status', 'created_at', 'reference_order__order_id'))
+            for r in rows:
+                r['created_at'] = r['created_at'].strftime('%d %b %Y, %I:%M %p')
+                r['amount'] = str(r['amount'])
+
+        elif report_type == 'refunds':
+            qs = Refund.objects.filter(reference_order__sold_by=business_code)
+            if date_from: qs = qs.filter(created_at__gte=make_dt(date_from))
+            if date_to:   qs = qs.filter(created_at__lte=make_dt(date_to, end=True))
+            qs = qs.order_by('-created_at')
+            summary = {'total': qs.count(), 'amount': str(qs.filter(refund_status='Refunded').aggregate(t=Sum('amount'))['t'] or 0)}
+            rows = list(qs.values('reference_order__order_id', 'amount', 'payment_mode', 'refund_status', 'seller_status', 'created_at', 'refunded_at'))
+            for r in rows:
+                r['created_at'] = r['created_at'].strftime('%d %b %Y')
+                r['refunded_at'] = r['refunded_at'].strftime('%d %b %Y') if r['refunded_at'] else '-'
+                r['amount'] = str(r['amount'])
+
+        elif report_type == 'inventory':
+            qs = Product.objects.filter(business_code=business_code)
+            stock_filter = request.GET.get('stock_filter', '')
+            if stock_filter == 'low':    qs = qs.filter(stock__gt=0, stock__lt=5)
+            elif stock_filter == 'out':  qs = qs.filter(stock=0)
+            elif stock_filter == 'inactive': qs = qs.filter(status='Inactive')
+            qs = qs.order_by('stock')
+            summary = {'total': qs.count(), 'stock_value': str(qs.filter(status='Active').aggregate(v=Sum(models.F('stock') * models.F('selling_price')))['v'] or 0)}
+            rows = list(qs.values('product_name', 'stock', 'selling_price', 'mrp', 'status', 'modified_at'))
+            for r in rows:
+                r['modified_at'] = r['modified_at'].strftime('%d %b %Y') if r['modified_at'] else '-'
+                r['selling_price'] = str(r['selling_price'])
+                r['mrp'] = str(r['mrp']) if r['mrp'] else '-'
+
+        return JsonResponse({'success': True, 'rows': rows, 'summary': summary})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 def management_dashboard(request):
     if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
@@ -753,6 +951,7 @@ def update_seller_payment_status(request):
         data = json.loads(request.body)
         order_id = data.get('order_id')
         seller_status = data.get('seller_status')
+        comments = data.get('comments', '')
         
         username = request.session.get('user_id')
         user = StaffUser.objects.get(username=username)
@@ -766,6 +965,7 @@ def update_seller_payment_status(request):
                 order.payment_status = 'Failed'
                 order.cancelled_at = timezone.now()
                 order.cancelled_by = modifier_name
+                order.cancelled_comments = comments
                 order.modified_by = modifier_name
                 order.save()
                 Payment.objects.filter(reference_order=order).update(status='Failed', modified_at=timezone.now(), modified_by=modifier_name)
@@ -775,6 +975,7 @@ def update_seller_payment_status(request):
                 order.payment_status = 'Cancelled'
                 order.cancelled_at = timezone.now()
                 order.cancelled_by = modifier_name
+                order.cancelled_comments = comments
                 order.modified_by = modifier_name
                 order.save()
                 Payment.objects.filter(reference_order=order).update(status='Cancelled', modified_at=timezone.now(), modified_by=modifier_name)
@@ -784,6 +985,7 @@ def update_seller_payment_status(request):
                 order.order_status = 'Confirmed'
                 order.confirmed_at = timezone.now()
                 order.confirmed_by = modifier_name
+                order.confirmed_comments = comments
                 order.modified_by = modifier_name
                 order.save()
                 Payment.objects.filter(reference_order=order).update(status='Successful', modified_at=timezone.now(), modified_by=modifier_name)

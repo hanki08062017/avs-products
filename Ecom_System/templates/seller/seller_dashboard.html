@@ -58,28 +58,119 @@
 
 <div id="dashboard" class="tab-content active">
     <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Dashboard Overview</h2>
-    
-    <div class="stats">
-        <div class="stat-card">
+
+    <!-- Revenue & Payments -->
+    <h4 style="color:#7f8c8d; margin-bottom:0.75rem; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">Revenue & Payments</h4>
+    <div class="stats" style="grid-template-columns: repeat(3,1fr); margin-bottom:2rem;">
+        <div class="stat-card" style="border-left-color:#27ae60;">
+            <h4>₹{{ total_revenue }}</h4>
+            <p>Total Revenue</p>
+            <small style="color:#95a5a6;">Delivered + Paid orders</small>
+        </div>
+        <div class="stat-card" style="border-left-color:#e67e22;">
+            <h4>{{ pending_payments_count }}</h4>
+            <p>Pending Payments</p>
+            <small style="color:#95a5a6;">Awaiting confirmation</small>
+        </div>
+        <div class="stat-card" style="border-left-color:#e74c3c;">
+            <h4>{{ pending_refunds_count }}</h4>
+            <p>Pending Refunds</p>
+            <small style="color:#95a5a6;">Awaiting processing</small>
+        </div>
+    </div>
+
+    <!-- Orders -->
+    <h4 style="color:#7f8c8d; margin-bottom:0.75rem; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">Orders</h4>
+    <div class="stats" style="grid-template-columns: repeat(4,1fr); margin-bottom:2rem;">
+        <div class="stat-card" style="border-left-color:#3498db;">
+            <h4>{{ orders.paginator.count }}</h4>
+            <p>Total Orders</p>
+        </div>
+        <div class="stat-card" style="border-left-color:#f39c12;">
+            <h4>{{ active_orders_count }}</h4>
+            <p>Active Orders</p>
+            <small style="color:#95a5a6;">Placed / Processing</small>
+        </div>
+        <div class="stat-card" style="border-left-color:#27ae60;">
+            <h4>{{ completed_orders_count }}</h4>
+            <p>Delivered</p>
+        </div>
+        <div class="stat-card" style="border-left-color:#e74c3c;">
+            <h4>{{ cancelled_orders_count }}</h4>
+            <p>Cancelled</p>
+        </div>
+    </div>
+
+    <!-- Products -->
+    <h4 style="color:#7f8c8d; margin-bottom:0.75rem; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">Products</h4>
+    <div class="stats" style="grid-template-columns: repeat(4,1fr); margin-bottom:2rem;">
+        <div class="stat-card" style="border-left-color:#3498db;">
             <h4>{{ products.count }}</h4>
             <p>Total Products</p>
         </div>
-        <div class="stat-card" style="border-left-color: #e74c3c;">
-            <h4>{{ orders.count }}</h4>
-            <p>Total Orders</p>
+        <div class="stat-card" style="border-left-color:#27ae60;">
+            <h4>{{ active_products_count }}</h4>
+            <p>Active Products</p>
         </div>
-        <div class="stat-card" style="border-left-color: #f39c12;">
+        <div class="stat-card" style="border-left-color:#e67e22;">
+            <h4>{{ low_stock_count }}</h4>
+            <p>Low Stock</p>
+            <small style="color:#95a5a6;">Stock &lt; 5</small>
+        </div>
+        <div class="stat-card" style="border-left-color:#e74c3c;">
+            <h4>{{ out_of_stock_count }}</h4>
+            <p>Out of Stock</p>
+        </div>
+    </div>
+
+    <!-- Staff -->
+    <h4 style="color:#7f8c8d; margin-bottom:0.75rem; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">Staff</h4>
+    <div class="stats" style="grid-template-columns: repeat(2,1fr); margin-bottom:2rem;">
+        <div class="stat-card" style="border-left-color:#9b59b6;">
             <h4>{{ staff_count }}</h4>
             <p>Total Staff</p>
         </div>
-        <div class="stat-card" style="border-left-color: #27ae60;">
-            <h4>₹0</h4>
-            <p>Total Revenue</p>
+        <div class="stat-card" style="border-left-color:#27ae60;">
+            <h4>{{ active_staff_count }}</h4>
+            <p>Active Staff</p>
         </div>
     </div>
-    
-    <h3 style="margin-bottom: 1rem; color: #2c3e50;">Recent Products</h3>
-    <table>
+
+    <!-- Recent Orders -->
+    <h3 style="margin-bottom:1rem; color:#2c3e50;">Recent Orders</h3>
+    <div style="overflow-x:auto;">
+    <table style="white-space:nowrap;">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Payment</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders|slice:":5" %}
+            <tr onclick="window.location='/seller/order-details/{{ order.order_id }}/'" style="cursor:pointer;">
+                <td>{{ order.order_id }}</td>
+                <td>{{ order.customer_name }}</td>
+                <td>₹{{ order.total_amount }}</td>
+                <td>{{ order.payment_status }}</td>
+                <td>{{ order.order_status }}</td>
+                <td>{{ order.created_at|date:"d M Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align:center; color:#7f8c8d;">No orders yet</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <!-- Recent Products -->
+    <h3 style="margin:2rem 0 1rem; color:#2c3e50;">Recent Products</h3>
+    <div style="overflow-x:auto;">
+    <table style="white-space:nowrap;">
         <thead>
             <tr>
                 <th>Product Name</th>
@@ -91,16 +182,19 @@
         </thead>
         <tbody>
             {% for product in products|slice:":5" %}
-            <tr>
+            <tr onclick="window.location='{% url 'view_product' product.id %}'" style="cursor:pointer;">
                 <td>{{ product.product_name }}</td>
                 <td>{{ product.category }}</td>
                 <td>₹{{ product.selling_price }}</td>
-                <td>{{ product.stock }}</td>
+                <td>{% if product.stock == 0 %}<span style="color:#e74c3c;font-weight:bold;">0</span>{% elif product.stock < 5 %}<span style="color:#e67e22;font-weight:bold;">{{ product.stock }}</span>{% else %}{{ product.stock }}{% endif %}</td>
                 <td>{{ product.status }}</td>
             </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center; color:#7f8c8d;">No products yet</td></tr>
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 
 <div id="orders" class="tab-content">
@@ -606,10 +700,10 @@ function searchProducts() {
                     <td>{{ staff.full_name }}</td>
                     <td>{{ staff.phone }}</td>
                     <td>{{ staff.email }}</td>
-                    <td>{{ staff.staff_role }}</td>
+                    <td>{{ staff.role }}</td>
                     <td>{{ staff.status }}</td>
                     <td style="font-size: 0.85rem;">
-                        {% if staff.staff_role == 'Seller-Admin' or staff.staff_role == 'Shop-Admin' %}
+                        {% if staff.role == 'Admin' %}
                             <span style="background: #3498db; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: bold;">All</span>
                         {% elif staff.privileges %}
                             {% if staff.privileges.manage_orders %}<span style="background: #d5f4e6; color: #27ae60; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.1rem; display: inline-block;">Orders</span>{% endif %}
@@ -1015,34 +1109,14 @@ function updateSellerStatus(orderId, txnId) {
         alert('Please select a status to update');
         return;
     }
-    
-    if (confirm(`Are you sure you want to update seller status to ${newStatus}?`)) {
-        const csrftoken = getCookie('csrftoken');
-        
-        fetch('/seller/update-seller-payment-status/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                order_id: orderId,
-                seller_status: newStatus
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Seller status updated successfully');
-                location.reload();
-            } else {
-                alert('Failed to update status: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            alert('Error updating status: ' + error);
-        });
-    }
+
+    document.getElementById('paymentModalOrderId').value = orderId;
+    document.getElementById('paymentModalTxnId').value = txnId;
+    document.getElementById('paymentModalStatus').value = newStatus;
+    document.getElementById('paymentModalLabel').textContent = `${newStatus} - Comments *`;
+    document.getElementById('paymentComments').value = '';
+    document.getElementById('paymentCommentsError').style.display = 'none';
+    document.getElementById('paymentModal').style.display = 'flex';
 }
 
 function updateRefundStatus(refundId) {
@@ -1097,7 +1171,7 @@ function updateRefundStatus(refundId) {
         .then(data => {
             if (data.success) {
                 alert('Refund status updated successfully');
-                location.reload();
+                window.location.href = '/seller/?tab=payments&pv=refund#payments';
             } else {
                 alert('Failed to update status: ' + (data.message || 'Unknown error'));
             }
@@ -1110,30 +1184,201 @@ function updateRefundStatus(refundId) {
 </script>
 
 <div id="reports" class="tab-content">
-    <h2 style="margin-bottom: 1.5rem; color: #2c3e50;">Reports</h2>
-    <div class="stats">
-        <div class="stat-card">
-            <h4>₹0</h4>
-            <p>Sales Report</p>
+    <h2 style="margin-bottom:1.5rem; color:#2c3e50;">Reports</h2>
+
+    <!-- Report Type Selector -->
+    <div style="background:white; border-radius:8px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:1.5rem;">
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+            <button onclick="selectReport('orders')" class="report-type-btn active" id="btn-orders">🛒 Orders Report</button>
+            <button onclick="selectReport('sales')" class="report-type-btn" id="btn-sales">💰 Sales Report</button>
+            <button onclick="selectReport('payments')" class="report-type-btn" id="btn-payments">💳 Payments Report</button>
+            <button onclick="selectReport('refunds')" class="report-type-btn" id="btn-refunds">↩ Refunds Report</button>
+            <button onclick="selectReport('inventory')" class="report-type-btn" id="btn-inventory">📦 Inventory Report</button>
         </div>
-        <div class="stat-card" style="border-left-color: #9b59b6;">
-            <h4>0</h4>
-            <p>Inventory Report</p>
-        </div>
-        <div class="stat-card" style="border-left-color: #1abc9c;">
-            <h4>0</h4>
-            <p>Staff Performance</p>
-        </div>
-        <div class="stat-card" style="border-left-color: #e67e22;">
-            <h4>0</h4>
-            <p>Customer Report</p>
+
+        <!-- Filters -->
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555; margin-bottom:4px;">Quick Select</label>
+                <select id="quickRange" onchange="applyQuickRange()" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                    <option value="">-- Quick Range --</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 1 Month</option>
+                    <option value="3month">Last 3 Months</option>
+                    <option value="6month">Last 6 Months</option>
+                    <option value="year">Last 1 Year</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555; margin-bottom:4px;">From</label>
+                <input type="date" id="reportFrom" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:0.85rem; color:#555; margin-bottom:4px;">To</label>
+                <input type="date" id="reportTo" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+            </div>
+            <!-- Extra filter (status etc) -->
+            <div id="extraFilterWrap" style="display:none;">
+                <label style="display:block; font-size:0.85rem; color:#555; margin-bottom:4px;" id="extraFilterLabel">Filter</label>
+                <select id="extraFilter" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;"></select>
+            </div>
+            <button onclick="fetchReport()" style="background:#3498db; color:white; padding:0.5rem 1.5rem; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Fetch Report</button>
         </div>
     </div>
-    <button class="btn">Generate Sales Report</button>
-    <button class="btn" style="background: #9b59b6;">Generate Inventory Report</button>
-    <button class="btn" style="background: #1abc9c;">Generate Staff Report</button>
-    <button class="btn" style="background: #e67e22;">Generate Customer Report</button>
+
+    <!-- Summary Cards -->
+    <div id="reportSummary" style="display:none; margin-bottom:1.5rem;"></div>
+
+    <!-- Results Table -->
+    <div id="reportResults" style="display:none; background:white; border-radius:8px; padding:1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h4 id="reportTitle" style="margin:0; color:#2c3e50;"></h4>
+            <span id="reportCount" style="color:#7f8c8d; font-size:0.9rem;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table id="reportTable" style="width:100%; border-collapse:collapse; white-space:nowrap;">
+                <thead id="reportThead"></thead>
+                <tbody id="reportTbody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div id="reportEmpty" style="display:none; text-align:center; color:#7f8c8d; padding:2rem;">No data found for the selected filters.</div>
+    <div id="reportLoading" style="display:none; text-align:center; padding:2rem; color:#3498db;">Loading...</div>
 </div>
+
+<style>
+.report-type-btn { padding:0.5rem 1.25rem; border:2px solid #ddd; background:white; border-radius:4px; cursor:pointer; font-size:0.9rem; color:#555; transition:all 0.2s; }
+.report-type-btn:hover { border-color:#3498db; color:#3498db; }
+.report-type-btn.active { border-color:#3498db; background:#3498db; color:white; font-weight:600; }
+</style>
+
+<script>
+let currentReport = 'orders';
+
+const REPORT_CONFIG = {
+    orders: {
+        title: 'Orders Report',
+        extraLabel: 'Order Status',
+        extraOptions: [['','All'],['Placed','Placed'],['Confirmed','Confirmed'],['Processing','Processing'],['Shipped','Shipped'],['Delivered','Delivered'],['Cancelled','Cancelled']],
+        heads: ['Order ID','Customer','Amount','Payment Method','Payment Status','Order Status','Date'],
+        row: r => [r.order_id, r.customer_name, '&#8377;'+r.total_amount, r.payment_method, r.payment_status, r.order_status, r.created_at],
+        summary: s => `<div class="stats" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" style="border-left-color:#3498db;"><h4>${s.total}</h4><p>Total Orders</p></div><div class="stat-card" style="border-left-color:#27ae60;"><h4>&#8377;${s.revenue}</h4><p>Revenue (Delivered)</p></div></div>`
+    },
+    sales: {
+        title: 'Sales Report',
+        extraLabel: null,
+        extraOptions: [],
+        heads: ['Order ID','Customer','Amount','Payment Method','Delivered On'],
+        row: r => [r.order_id, r.customer_name, '&#8377;'+r.total_amount, r.payment_method, r.delivered_at],
+        summary: s => `<div class="stats" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" style="border-left-color:#27ae60;"><h4>${s.total_orders}</h4><p>Delivered Orders</p></div><div class="stat-card" style="border-left-color:#3498db;"><h4>&#8377;${s.total_revenue}</h4><p>Total Revenue</p></div></div>`
+    },
+    payments: {
+        title: 'Payments Report',
+        extraLabel: 'Status',
+        extraOptions: [['','All'],['Pending','Pending'],['Successful','Successful'],['Failed','Failed'],['Cancelled','Cancelled']],
+        heads: ['Transaction ID','Order ID','Amount','Mode','Type','Status','Date'],
+        row: r => [r.transaction_id, r['reference_order__order_id'], '&#8377;'+r.amount, r.payment_mode, r.transaction_type, r.status, r.created_at],
+        summary: s => `<div class="stats" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" style="border-left-color:#3498db;"><h4>${s.total}</h4><p>Transactions</p></div><div class="stat-card" style="border-left-color:#27ae60;"><h4>&#8377;${s.amount}</h4><p>Total Amount</p></div></div>`
+    },
+    refunds: {
+        title: 'Refunds Report',
+        extraLabel: null,
+        extraOptions: [],
+        heads: ['Order ID','Amount','Mode','Refund Status','Seller Status','Raised On','Refunded On'],
+        row: r => [r['reference_order__order_id'], '&#8377;'+r.amount, r.payment_mode, r.refund_status, r.seller_status, r.created_at, r.refunded_at],
+        summary: s => `<div class="stats" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" style="border-left-color:#e74c3c;"><h4>${s.total}</h4><p>Total Refunds</p></div><div class="stat-card" style="border-left-color:#e67e22;"><h4>&#8377;${s.amount}</h4><p>Amount Refunded</p></div></div>`
+    },
+    inventory: {
+        title: 'Inventory Report',
+        extraLabel: 'Stock Filter',
+        extraOptions: [['','All Products'],['low','Low Stock (<5)'],['out','Out of Stock'],['inactive','Inactive']],
+        heads: ['Product','Stock','Selling Price','MRP','Status','Last Modified'],
+        row: r => [r.product_name, r.stock, '&#8377;'+r.selling_price, r.mrp === '-' ? '-' : '&#8377;'+r.mrp, r.status, r.modified_at],
+        summary: s => `<div class="stats" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" style="border-left-color:#3498db;"><h4>${s.total}</h4><p>Products</p></div><div class="stat-card" style="border-left-color:#9b59b6;"><h4>&#8377;${s.stock_value}</h4><p>Stock Value</p></div></div>`
+    }
+};
+
+function selectReport(type) {
+    currentReport = type;
+    document.querySelectorAll('.report-type-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + type).classList.add('active');
+    const cfg = REPORT_CONFIG[type];
+    const wrap = document.getElementById('extraFilterWrap');
+    if (cfg.extraLabel) {
+        document.getElementById('extraFilterLabel').textContent = cfg.extraLabel;
+        const sel = document.getElementById('extraFilter');
+        sel.innerHTML = cfg.extraOptions.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
+        wrap.style.display = 'block';
+    } else {
+        wrap.style.display = 'none';
+    }
+    document.getElementById('reportSummary').style.display = 'none';
+    document.getElementById('reportResults').style.display = 'none';
+    document.getElementById('reportEmpty').style.display = 'none';
+}
+
+function applyQuickRange() {
+    const val = document.getElementById('quickRange').value;
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    const todayStr = fmt(today);
+    let from = '';
+    if (val === 'today')  { from = todayStr; }
+    else if (val === 'week')   { const d = new Date(today); d.setDate(d.getDate()-7); from = fmt(d); }
+    else if (val === 'month')  { const d = new Date(today); d.setMonth(d.getMonth()-1); from = fmt(d); }
+    else if (val === '3month') { const d = new Date(today); d.setMonth(d.getMonth()-3); from = fmt(d); }
+    else if (val === '6month') { const d = new Date(today); d.setMonth(d.getMonth()-6); from = fmt(d); }
+    else if (val === 'year')   { const d = new Date(today); d.setFullYear(d.getFullYear()-1); from = fmt(d); }
+    else if (val === 'all')    { from = ''; document.getElementById('reportFrom').value = ''; document.getElementById('reportTo').value = ''; return; }
+    document.getElementById('reportFrom').value = from;
+    document.getElementById('reportTo').value = todayStr;
+}
+
+function fetchReport() {
+    const from = document.getElementById('reportFrom').value;
+    const to = document.getElementById('reportTo').value;
+    const extra = document.getElementById('extraFilter').value;
+    const cfg = REPORT_CONFIG[currentReport];
+
+    document.getElementById('reportLoading').style.display = 'block';
+    document.getElementById('reportResults').style.display = 'none';
+    document.getElementById('reportSummary').style.display = 'none';
+    document.getElementById('reportEmpty').style.display = 'none';
+
+    let url = `/seller/get-report/?report_type=${currentReport}`;
+    if (from) url += `&date_from=${from}`;
+    if (to)   url += `&date_to=${to}`;
+    if (extra) url += `&${currentReport === 'inventory' ? 'stock_filter' : 'status'}=${extra}`;
+
+    fetch(url)
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('reportLoading').style.display = 'none';
+        if (!data.success) { alert('Error: ' + data.error); return; }
+        if (!data.rows.length) { document.getElementById('reportEmpty').style.display = 'block'; return; }
+
+        // Summary
+        const sumDiv = document.getElementById('reportSummary');
+        sumDiv.innerHTML = cfg.summary(data.summary);
+        sumDiv.style.display = 'block';
+
+        // Table
+        document.getElementById('reportTitle').textContent = cfg.title;
+        document.getElementById('reportCount').textContent = data.rows.length + ' record(s)';
+        document.getElementById('reportThead').innerHTML = '<tr>' + cfg.heads.map(h => `<th style="padding:0.6rem; background:#34495e; color:white; text-align:left;">${h}</th>`).join('') + '</tr>';
+        document.getElementById('reportTbody').innerHTML = data.rows.map(r =>
+            '<tr style="border-bottom:1px solid #ecf0f1;">' + cfg.row(r).map(c => `<td style="padding:0.6rem;">${c}</td>`).join('') + '</tr>'
+        ).join('');
+        document.getElementById('reportResults').style.display = 'block';
+    })
+    .catch(e => { document.getElementById('reportLoading').style.display = 'none'; alert('Error: ' + e); });
+}
+
+// Init
+selectReport('orders');
+</script>
 
 <script>
 function openTab(evt, tabName) {
@@ -1149,8 +1394,8 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).classList.add("active");
     evt.currentTarget.classList.add("active");
     
-    // Update URL hash without scrolling
-    history.replaceState(null, '', '#' + tabName);
+    // Update URL: clear query params, set only hash
+    history.replaceState(null, '', window.location.pathname + '#' + tabName);
 }
 
 // Check if URL has hash and open corresponding tab
@@ -1191,6 +1436,12 @@ window.addEventListener('DOMContentLoaded', function() {
         if (tabButton) openTab({ currentTarget: tabButton }, activeTab);
     }
 
+    const pvParam = urlParams.get('pv');
+    if (pvParam) {
+        const pvRadio = document.querySelector(`input[name="paymentView"][value="${pvParam}"]`);
+        if (pvRadio) { pvRadio.checked = true; togglePaymentView(); }
+    }
+
     const savedY = sessionStorage.getItem('restoreScrollY');
     if (savedY !== null) {
         sessionStorage.removeItem('restoreScrollY');
@@ -1215,6 +1466,52 @@ window.addEventListener('DOMContentLoaded', function() {
 <input type="hidden" id="modalNewStatus">
 <input type="hidden" id="modalOriginalStatus">
 <input type="hidden" id="modalSelectRef">
+
+<!-- Payment Status Comments Modal -->
+<div id="paymentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:8px; padding:28px; width:420px; max-width:95vw;">
+        <h3 style="margin:0 0 16px; color:#2c3e50;">Update Payment Status</h3>
+        <label id="paymentModalLabel" style="display:block; font-weight:bold; color:#555; margin-bottom:6px; font-size:14px;">Comments *</label>
+        <textarea id="paymentComments" rows="4" placeholder="Enter comments..." style="width:100%; padding:9px 12px; border:1px solid #ddd; border-radius:4px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
+        <div id="paymentCommentsError" style="display:none; color:#e74c3c; font-size:13px; margin-top:4px;">Comments are required.</div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button onclick="submitPaymentStatusChange()" style="background:#3498db; color:white; padding:9px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">Confirm</button>
+            <button onclick="document.getElementById('paymentModal').style.display='none'" style="background:#95a5a6; color:white; padding:9px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">Cancel</button>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="paymentModalOrderId">
+<input type="hidden" id="paymentModalTxnId">
+<input type="hidden" id="paymentModalStatus">
+
+<script>
+function submitPaymentStatusChange() {
+    const comments = document.getElementById('paymentComments').value.trim();
+    if (!comments) {
+        document.getElementById('paymentCommentsError').style.display = 'block';
+        return;
+    }
+    const orderId = document.getElementById('paymentModalOrderId').value;
+    const newStatus = document.getElementById('paymentModalStatus').value;
+    document.getElementById('paymentModal').style.display = 'none';
+    const csrftoken = getCookie('csrftoken');
+    fetch('/seller/update-seller-payment-status/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ order_id: orderId, seller_status: newStatus, comments: comments })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const pv = document.querySelector('input[name="paymentView"]:checked')?.value || 'pending';
+            window.location.href = '/seller/?tab=payments&pv=' + pv + '#payments';
+        } else {
+            alert('Failed: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(e => alert('Error: ' + e));
+}
+</script>
 
 <!-- Add Stock Modal -->
 <div id="addStockModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">

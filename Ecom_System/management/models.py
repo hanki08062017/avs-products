@@ -1,5 +1,15 @@
+import os
 from django.db import models
 from customer.models import Customer
+
+def _product_image_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    product = instance.product
+    seller_code = product.business_code.code if product.business_code else 'unknown'
+    product_slug = f"{product.id}_{product.product_name.strip().replace(' ', '_').lower()}"
+    existing_count = product.images.count()
+    seq = existing_count + 1
+    return f"product/{seller_code}/{product_slug}_{seq}{ext}"
 
 class BusinessDetail(models.Model):
     class Meta:
@@ -171,7 +181,7 @@ class Product(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='products/')
+    image = models.ImageField(upload_to=_product_image_path)
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -458,28 +468,6 @@ class DeliveryZone(models.Model):
 
     def __str__(self):
         return f"{self.zone_name} ({self.pincode_to})"
-
-
-class DeliveryWeightSlab(models.Model):
-    class Meta:
-        db_table = 'business_deliveryweightslab'
-
-    STATUS_CHOICES = [('Active', 'Active'), ('Inactive', 'Inactive')]
-
-    id = models.AutoField(primary_key=True)
-    business_code = models.ForeignKey(BusinessDetail, to_field='code', on_delete=models.CASCADE)
-    slab_name = models.CharField(max_length=100)
-    weight_from_kg = models.DecimalField(max_digits=8, decimal_places=2)
-    weight_to_kg = models.DecimalField(max_digits=8, decimal_places=2)
-    extra_charge = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.CharField(max_length=100)
-    modified_at = models.DateTimeField(auto_now=True)
-    modified_by = models.CharField(max_length=100, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.slab_name} ({self.weight_from_kg}-{self.weight_to_kg} kg)"
 
 
 class Refund(models.Model):

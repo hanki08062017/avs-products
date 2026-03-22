@@ -108,19 +108,7 @@ function downloadInvoice() {
         </div>
     </div>
 
-    {% comment %} <div class="status-bar">
-        <div class="status-item">
-            <span class="status-dot {% if order.payment_status != 'Successful' %}pending{% endif %}"></span>
-            Payment: <strong>{{ order.payment_status }}</strong>
-        </div>
-        <div class="status-item">
-            <span class="status-dot"></span>
-            Order Status: <strong>{{ order.order_status }}</strong>
-        </div>
-        <div class="status-item">
-            Method: <strong>{{ order.payment_method }}</strong>
-        </div>
-    </div> {% endcomment %}
+
 
     <div class="body">
 
@@ -137,7 +125,7 @@ function downloadInvoice() {
                 <div class="info-row"><strong>Order ID:</strong> {{ order.order_id }}</div>
                 <div class="info-row"><strong>Date:</strong> {{ order.placed_at|date:"d-M-Y, h:i A" }}</div>
                 <div class="info-row"><strong>Payment Method:</strong> {{ order.payment_method }}</div>
-                <div class="info-row"><strong>Order Status:</strong> {{ order.order_status }} {{ order.delivered_at|date:"d-M-Y" }}</div>
+                <div class="info-row"><strong>Order Status:</strong> {{ order.order_status }} on {{ order.delivered_at|date:"d-M-Y" }}</div>
             </div>
             
            

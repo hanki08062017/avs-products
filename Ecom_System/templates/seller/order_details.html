@@ -19,7 +19,23 @@
 </style>
 
 <div class="details-container">
-    <a href="javascript:history.back()" class="btn-back">Back to Manage Orders</a>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <a href="javascript:history.back()" class="btn-back" style="margin-bottom:0;">Back to Manage Orders</a>
+        {% if order.order_status != 'Delivered' and order.order_status != 'Cancelled' %}
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <span style="font-weight:600; color:#34495e;">Change Status:</span>
+            <select id="orderStatusSelect" class="status-select" data-order-id="{{ order.order_id }}" data-original="{{ order.order_status }}" onchange="updateOrderStatus(this)">
+                <option value="{{ order.order_status }}" selected>{{ order.order_status }}</option>
+                {% if order.order_status == 'Placed' %}<option value="Confirmed">Confirmed</option>
+                {% elif order.order_status == 'Confirmed' %}<option value="Processing">Processing</option>
+                {% elif order.order_status == 'Processing' %}<option value="Shipped">Shipped</option>
+                {% elif order.order_status == 'Shipped' %}<option value="Delivered">Delivered</option>
+                {% endif %}
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        {% endif %}
+    </div>
     <h2>Order Details - {{ order.order_id }}</h2>
     
     <div class="info-section">
@@ -35,23 +51,7 @@
             </div>
             <div class="info-item">
                 <div class="info-label">Order Status:</div>
-                <div class="info-value">
-                    <select id="orderStatusSelect" class="status-select" data-order-id="{{ order.order_id }}" data-original="{{ order.order_status }}" onchange="updateOrderStatus(this)">
-                        <option value="{{ order.order_status }}" selected>{{ order.order_status }}</option>
-                        {% if order.order_status == 'Placed' %}
-                        <option value="Confirmed">Confirmed</option>
-                        {% elif order.order_status == 'Confirmed' %}
-                        <option value="Processing">Processing</option>
-                        {% elif order.order_status == 'Processing' %}
-                        <option value="Shipped">Shipped</option>
-                        {% elif order.order_status == 'Shipped' %}
-                        <option value="Delivered">Delivered</option>
-                        {% endif %}
-                        {% if order.order_status != 'Delivered' and order.order_status != 'Cancelled' %}
-                        <option value="Cancelled">Cancelled</option>
-                        {% endif %}
-                    </select>
-                </div>
+                <div class="info-value">{{ order.order_status }}</div>
             </div>
             <div class="info-item">
                 <div class="info-label">Payment Status:</div>

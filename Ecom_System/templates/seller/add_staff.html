@@ -24,7 +24,7 @@
     <div class="info-box">
         <strong>Business Code:</strong> {{ business_code }} | <strong>Business Type:</strong> {{ business_type }}
     </div>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         
         <h3 style="color: #2c3e50; margin-bottom: 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Personal Information</h3>
@@ -34,8 +34,8 @@
                 <input type="text" name="staff_id" value="{{ auto_staff_id }}" readonly style="background: #f0f0f0;" required>
             </div>
             <div class="form-group">
-                <label>Username *</label>
-                <input type="text" name="username" required>
+                <label>Username</label>
+                <input type="text" id="autoUsername" readonly style="background: #f0f0f0; color: #27ae60; font-weight: bold;">
             </div>
             <div class="form-group">
                 <label>First Name *</label>
@@ -55,11 +55,19 @@
             </div>
             <div class="form-group">
                 <label>Phone *</label>
-                <input type="text" name="phone" required>
+                <input type="text" name="phone" id="phoneInput" required>
             </div>
+
             <div class="form-group">
                 <label>Staff Role *</label>
-                <input type="text" name="staff_role" value="{{ allowed_role }}" readonly style="background: #f0f0f0;" required>
+                {% if is_admin %}
+                <select name="staff_role" required onchange="handleRoleChange(this.value)">
+                    <option value="Staff">Staff</option>
+                    <option value="Admin">Admin</option>
+                </select>
+                {% else %}
+                <input type="text" name="staff_role" value="Staff" readonly style="background: #f0f0f0;" required>
+                {% endif %}
             </div>
         </div>
         
@@ -99,18 +107,74 @@
             </div>
         </div>
         
-        <h3 style="color: #2c3e50; margin: 1.5rem 0 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Staff Privileges</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem;">
-            <label style="font-weight: normal;"><input type="checkbox" name="manage_orders" style="width: auto; margin-right: 0.5rem;"> Manage Orders</label>
-            <label style="font-weight: normal;"><input type="checkbox" name="manage_products" style="width: auto; margin-right: 0.5rem;"> Manage Products</label>
-            <label style="font-weight: normal;"><input type="checkbox" name="manage_reports" style="width: auto; margin-right: 0.5rem;"> Manage Reports</label>
-            <label style="font-weight: normal;"><input type="checkbox" name="manage_payments" style="width: auto; margin-right: 0.5rem;"> Manage Payments</label>
+        <h3 style="color: #2c3e50; margin: 1.5rem 0 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">KYC Information</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Aadhaar Number</label>
+                <input type="text" name="aadhaar_number" maxlength="12" placeholder="12-digit Aadhaar">
+            </div>
+            <div class="form-group">
+                <label>Aadhaar Attachment</label>
+                <input type="file" name="aadhaar_attachment" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            <div class="form-group">
+                <label>PAN Number</label>
+                <input type="text" name="pan_number" maxlength="10" placeholder="10-character PAN" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+                <label>PAN Attachment</label>
+                <input type="file" name="pan_attachment" accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            <div class="form-group">
+                <label>Date of Birth</label>
+                <input type="date" name="dob">
+            </div>
         </div>
+
+        <h3 style="color: #2c3e50; margin: 1.5rem 0 1rem; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">Staff Privileges</h3>
+        <div id="privilegesSection" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_orders" id="chk_orders" style="width: auto; margin-right: 0.5rem;"> Manage Orders</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_products" id="chk_products" style="width: auto; margin-right: 0.5rem;"> Manage Products</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_reports" id="chk_reports" style="width: auto; margin-right: 0.5rem;"> Manage Reports</label>
+            <label style="font-weight: normal;"><input type="checkbox" name="manage_payments" id="chk_payments" style="width: auto; margin-right: 0.5rem;"> Manage Payments</label>
+        </div>
+        <div id="allAccessBadge" style="display:none; margin-bottom:1.5rem; padding:0.6rem 1rem; background:#d5f4e6; color:#27ae60; border-radius:4px; font-weight:600;">✔ All Access — Admin has full privileges</div>
         
         <div style="margin-top: 2rem;">
-            <a href="{% url 'manage_staff' %}" class="btn-back">Back</a>
+            <a href="{% url 'seller_dashboard' %}?tab=staff#staff" class="btn-back">Back</a>
             <button type="submit" class="btn-submit">Add Staff</button>
         </div>
     </form>
 </div>
+<script>
+const staffNumPart = '{{ auto_staff_id }}'.replace(/\D/g, '').slice(-2).padStart(2, '0');
+function updateUsername() {
+    const first = document.querySelector('[name=first_name]').value.trim();
+    const last = document.querySelector('[name=last_name]').value.trim();
+    if (first && last) {
+        const u = (last.slice(0, 2) + first.slice(0, 4) + staffNumPart).toUpperCase();
+        document.getElementById('autoUsername').value = u;
+    } else {
+        document.getElementById('autoUsername').value = '';
+    }
+}
+document.querySelector('[name=first_name]').addEventListener('input', updateUsername);
+document.querySelector('[name=last_name]').addEventListener('input', updateUsername);
+document.getElementById('phoneInput').addEventListener('input', updatePassword);
+
+function handleRoleChange(role) {
+    const checkboxes = ['chk_orders','chk_products','chk_reports','chk_payments'];
+    const section = document.getElementById('privilegesSection');
+    const badge = document.getElementById('allAccessBadge');
+    if (role === 'Admin') {
+        checkboxes.forEach(id => { const c = document.getElementById(id); c.checked = true; c.disabled = true; });
+        section.style.opacity = '0.4';
+        badge.style.display = 'block';
+    } else {
+        checkboxes.forEach(id => { const c = document.getElementById(id); c.checked = false; c.disabled = false; });
+        section.style.opacity = '1';
+        badge.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

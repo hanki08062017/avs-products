@@ -24,7 +24,7 @@
 <div class="staff-form">
     <h2>Edit Staff - {{ staff.staff_id }}</h2>
     
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         
         <div class="section">
@@ -140,6 +140,32 @@
                 <div class="form-group">
                     <label>Phone 2</label>
                     <input type="text" name="phone2" value="{{ staff.username.profile.phone2|default:'' }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>KYC Information</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" name="dob" value="{{ staff.username.profile.dob|date:'Y-m-d'|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label>Aadhaar Number</label>
+                    <input type="text" name="aadhaar_number" maxlength="12" value="{{ staff.username.profile.aadhaar_number|default:'' }}" placeholder="12-digit Aadhaar">
+                </div>
+                <div class="form-group">
+                    <label>Aadhaar Attachment{% if staff.username.profile.aadhaar_attachment %} <a href="{{ staff.username.profile.aadhaar_attachment.url }}" target="_blank" style="font-weight:normal; font-size:0.85rem;">(View current)</a>{% endif %}</label>
+                    <input type="file" name="aadhaar_attachment" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="form-group">
+                    <label>PAN Number</label>
+                    <input type="text" name="pan_number" maxlength="10" value="{{ staff.username.profile.pan_number|default:'' }}" placeholder="10-character PAN" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>PAN Attachment{% if staff.username.profile.pan_attachment %} <a href="{{ staff.username.profile.pan_attachment.url }}" target="_blank" style="font-weight:normal; font-size:0.85rem;">(View current)</a>{% endif %}</label>
+                    <input type="file" name="pan_attachment" accept=".pdf,.jpg,.jpeg,.png">
                 </div>
             </div>
         </div>

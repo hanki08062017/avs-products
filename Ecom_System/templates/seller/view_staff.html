@@ -56,7 +56,7 @@
             </div>
             <div class="info-item">
                 <label>Role</label>
-                <span>{{ staff.staff_role }}</span>
+                <span>{{ staff.role }}</span>
             </div>
             <div class="info-item">
                 <label>Status</label>
@@ -126,6 +126,32 @@
     </div>
     
     <div class="section">
+        <h3>KYC Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Date of Birth</label>
+                <span>{{ staff.username.profile.dob|date:"d M Y"|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Aadhaar Number</label>
+                <span>{{ staff.username.profile.aadhaar_number|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Aadhaar Attachment</label>
+                <span>{% if staff.username.profile.aadhaar_attachment %}<a href="{{ staff.username.profile.aadhaar_attachment.url }}" target="_blank">View</a>{% else %}-{% endif %}</span>
+            </div>
+            <div class="info-item">
+                <label>PAN Number</label>
+                <span>{{ staff.username.profile.pan_number|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <label>PAN Attachment</label>
+                <span>{% if staff.username.profile.pan_attachment %}<a href="{{ staff.username.profile.pan_attachment.url }}" target="_blank">View</a>{% else %}-{% endif %}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
         <h3>Privileges</h3>
         <div class="privilege-list">
             <div class="privilege-item {% if privileges.manage_orders %}active{% else %}inactive{% endif %}">
@@ -153,7 +179,7 @@
         {% else %}
         <span class="btn" style="background: #95a5a6; cursor: not-allowed;">Edit Staff (Inactive)</span>
         {% endif %}
-        <a href="{% url 'seller_dashboard' %}#staff" class="btn btn-secondary">Back to List</a>
+        <a href="{% url 'seller_dashboard' %}?tab=staff#staff" class="btn btn-secondary">Back to List</a>
     </div>
 </div>
 {% endblock %}
