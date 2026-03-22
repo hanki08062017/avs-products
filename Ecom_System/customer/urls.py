@@ -19,4 +19,6 @@ urlpatterns = [
     path('get-delivery-data/', views.get_delivery_data, name='get_delivery_data'),
     path('update-address/', views.update_address, name='update_address'),
     path('set-default-address/', views.set_default_address, name='set_default_address'),
+    path('delete-address/<int:address_id>/', views.delete_address, name='delete_address'),
+    path('edit-address/<int:address_id>/', views.edit_address, name='edit_address'),
 ]

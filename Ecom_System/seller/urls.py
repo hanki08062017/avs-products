@@ -7,14 +7,7 @@ urlpatterns = [
     path('staff-login/', views.staff_login, name='staff_login'),
     path('staff-logout/', views.staff_logout, name='staff_logout'),
     path('<str:username>/staff_profile/', views.seller_profile_view, name='seller_profile'),
-    
-    
-    
-    
-    
-    
     path('seller/', views.seller_dashboard, name='seller_dashboard'),
- 
     path('seller/config/', config_view, name='config'),
     path('seller/config/add-category/', add_category, name='add_category'),
     path('seller/config/edit-category/<int:id>/', edit_category, name='edit_category'),
@@ -31,7 +24,6 @@ urlpatterns = [
     path('seller/edit-product/<str:product_id>/', views.edit_product, name='edit_product'),
     path('remove-product-image/<int:image_id>/', views.remove_product_image, name='remove_product_image'),
     path('set-primary-image/<int:image_id>/', views.set_primary_image, name='set_primary_image'),
-    path('seller/orders/', views.manage_orders, name='manage_orders'),
     path('seller/update-order-status/<str:order_id>/', views.update_order_status, name='update_order_status'),
     path('seller/update-seller-payment-status/', views.update_seller_payment_status, name='update_seller_payment_status'),
     path('seller/update-refund-status/', views.update_refund_status, name='update_refund_status'),
@@ -40,11 +32,6 @@ urlpatterns = [
     path('seller/view-staff/<str:staff_id>/', views.view_staff, name='view_staff'),
     path('seller/edit-staff/<str:staff_id>/', views.edit_staff, name='edit_staff'),
     path('seller/get-report/', views.get_report, name='get_report'),
-    path('management/', views.management_dashboard, name='management_dashboard'),
-    
-    path('delete-address/<int:address_id>/', views.delete_address, name='delete_address'),
-    path('edit-address/<int:address_id>/', views.edit_address, name='edit_address'),
-    
     path('seller/profile/send-otp-email/', views.send_otp_email, name='send_otp_email'),
     path('seller/profile/verify-otp-email/', views.verify_otp_email, name='verify_otp_email'),
     path('seller/profile/send-otp-phone/', views.send_otp_phone, name='send_otp_phone'),

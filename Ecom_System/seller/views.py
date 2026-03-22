@@ -1,12 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from management.models import Product, ProductCategory, Order, BusinessDetail, ProductImage
-from customer.models import Customer
 from django.db import models
 from .models import Staff, StaffUser
 from django.contrib import messages
 
-# seller
 def staff_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -37,13 +35,7 @@ def staff_login(request):
 
 def staff_logout(request):
     request.session.flush()
-    
     return redirect('staff_login')
- 
-
-
-
-
 
 
 def seller_profile_view(request, username):
@@ -98,8 +90,8 @@ def seller_profile_view(request, username):
         return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin, 'success': 'Profile updated successfully'})
     
     return render(request, 'seller/profile.html', {'user': user, 'profile': profile, 'staff': staff, 'is_admin': is_admin})
-        
-     
+
+
 def seller_dashboard(request):
     if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
         return redirect('staff_login')
@@ -403,15 +395,6 @@ def add_stock(request):
         except (Product.DoesNotExist, ValueError, TypeError):
             return JsonResponse({'success': False})
     return JsonResponse({'success': False})
-
-def manage_orders(request):
-    if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
-        return redirect('staff_login')
-    
-    business_code = request.session.get('business_code')
-    orders = Order.objects.filter(sold_by=business_code).order_by('-created_at')
-    print(f"DEBUG: business_code={business_code}, orders_count={orders.count()}")
-    return render(request, 'seller/manage_orders.html', {'orders': orders, 'business_code': business_code})
 
 def update_order_status(request, order_id):
     if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
@@ -874,69 +857,6 @@ def get_report(request):
         return JsonResponse({'success': True, 'rows': rows, 'summary': summary})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-
-def management_dashboard(request):
-    if not request.session.get('is_logged_in') or request.session.get('user_type') != 'staff':
-        return redirect('staff_login')
-    
-    total_users = StaffUser.objects.count() + Customer.objects.count()
-    total_businesses = BusinessDetail.objects.count()
-    total_products = Product.objects.count()
-    total_orders = Order.objects.count()
-    total_staff = Staff.objects.count()
-    
-    recent_orders = Order.objects.all().order_by('-created_at')[:5]
-    businesses = BusinessDetail.objects.all()
-    
-    return render(request, 'seller/management_dashboard.html', {
-        'total_users': total_users,
-        'total_businesses': total_businesses,
-        'total_products': total_products,
-        'total_orders': total_orders,
-        'total_staff': total_staff,
-        'recent_orders': recent_orders,
-        'businesses': businesses
-    })
-
-
-def delete_address(request, address_id):
-    from customer.models import SavedAddress
-    from django.http import JsonResponse
-    
-    if not request.session.get('is_logged_in'):
-        return JsonResponse({'success': False})
-    
-    try:
-        address = SavedAddress.objects.get(id=address_id)
-        address.delete()
-        return JsonResponse({'success': True})
-    except SavedAddress.DoesNotExist:
-        return JsonResponse({'success': False})
-
-def edit_address(request, address_id):
-    from customer.models import SavedAddress
-    from django.http import JsonResponse
-    
-    if not request.session.get('is_logged_in'):
-        return JsonResponse({'success': False})
-    
-    if request.method == 'POST':
-        try:
-            address = SavedAddress.objects.get(id=address_id)
-            address.name = request.POST.get('name')
-            address.phone = request.POST.get('phone')
-            address.address1 = request.POST.get('address1')
-            address.address2 = request.POST.get('address2')
-            address.city = request.POST.get('city')
-            address.state = request.POST.get('state')
-            address.pin = request.POST.get('pin')
-            address.country = request.POST.get('country')
-            address.save()
-            return JsonResponse({'success': True})
-        except SavedAddress.DoesNotExist:
-            return JsonResponse({'success': False})
-    return JsonResponse({'success': False})
 
 
 def update_seller_payment_status(request):

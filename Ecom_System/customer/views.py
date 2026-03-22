@@ -67,7 +67,7 @@ def customer_login_view(request):
             return render(request, 'customer/customer_login.html', {'error': 'Invalid username or password'})
     
     return render(request, 'customer/customer_login.html')
-    
+
 
 def signup_view(request):
     if request.method == 'POST':
@@ -81,14 +81,14 @@ def signup_view(request):
         confirm_password = request.POST.get('confirm_password')
         
         if password != confirm_password:
-            return render(request, 'seller/signup.html', {'error': 'Passwords do not match'})
+            return render(request, 'customer/signup.html', {'error': 'Passwords do not match'})
         
         try:
             if Customer.objects.filter(username=username).exists():
-                return render(request, 'seller/signup.html', {'error': 'Username already exists'})
+                return render(request, 'customer/signup.html', {'error': 'Username already exists'})
             
             if Customer.objects.filter(email=email).exists():
-                return render(request, 'seller/signup.html', {'error': 'Email already exists'})
+                return render(request, 'customer/signup.html', {'error': 'Email already exists'})
             
             customer = Customer.objects.create(
                 first_name=first_name,
@@ -114,6 +114,7 @@ def customer_logout_view(request):
     request.session.flush()
     return redirect('home')
 
+
 def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     return render(request, 'customer/product_detail.html', {'product': product})
@@ -137,7 +138,6 @@ def checkout(request):
     delivery_free = delivery_settings.delivery_free
     ship_free = delivery_settings.ship_free
     
-     
     import json
     delivery_data = json.dumps({'min_amount_free_delivery': min_amount_free_delivery, 'base_charge': base_charge, 'max_distance_km' : max_distance_km, 'delivery_free': delivery_free, 'ship_free': ship_free})
     return render(request, 'customer/checkout.html', {'user': user, 'delivery_data': delivery_data})
@@ -535,7 +535,7 @@ def process_payment(request):
             if wallet and wallet.wallet_type == 'AVS':
                 # Check if OTP was verified
                 if not request.session.get(f'payment_verified_{avs_wallet_id}'):
-                    return render(request, 'seller/process_payment.html', {
+                    return render(request, 'customer/process_payment.html', {
                         'order_data': order_data,
                         'saved_card': SavedPaymentMethod.objects.filter(customer=customer, payment_type='Card', is_default=True).first(),
                         'saved_upi': SavedPaymentMethod.objects.filter(customer=customer, payment_type='UPI', is_default=True).first(),
@@ -944,7 +944,7 @@ def update_address(request):
 def set_default_address(request):
     if not request.session.get('is_logged_in'):
         return redirect('login')
-    
+
     if request.method == 'POST':
         from customer.models import SavedAddress, Customer
         from django.http import JsonResponse
@@ -963,3 +963,34 @@ def set_default_address(request):
     return JsonResponse({'success': False})
 
 
+def delete_address(request, address_id):
+    from django.http import JsonResponse
+    if not request.session.get('is_logged_in'):
+        return JsonResponse({'success': False})
+    try:
+        address = SavedAddress.objects.get(id=address_id)
+        address.delete()
+        return JsonResponse({'success': True})
+    except SavedAddress.DoesNotExist:
+        return JsonResponse({'success': False})
+
+def edit_address(request, address_id):
+    from django.http import JsonResponse
+    if not request.session.get('is_logged_in'):
+        return JsonResponse({'success': False})
+    if request.method == 'POST':
+        try:
+            address = SavedAddress.objects.get(id=address_id)
+            address.name = request.POST.get('name')
+            address.phone = request.POST.get('phone')
+            address.address1 = request.POST.get('address1')
+            address.address2 = request.POST.get('address2')
+            address.city = request.POST.get('city')
+            address.state = request.POST.get('state')
+            address.pin = request.POST.get('pin')
+            address.country = request.POST.get('country')
+            address.save()
+            return JsonResponse({'success': True})
+        except SavedAddress.DoesNotExist:
+            return JsonResponse({'success': False})
+    return JsonResponse({'success': False})
