@@ -7,7 +7,7 @@
     .profile-pic-section { text-align: center; margin-bottom: 2rem; }
     .profile-pic { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid #3498db; }
     .profile-pic-placeholder { width: 150px; height: 150px; border-radius: 50%; background: #ecf0f1; display: inline-flex; align-items: center; justify-content: center; font-size: 3rem; color: #95a5a6; border: 4px solid #3498db; }
-    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem; }
+    .info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
     .info-item { padding: 0.75rem; background: #f8f9fa; border-radius: 4px; }
     .info-item label { display: block; font-size: 0.85rem; color: #7f8c8d; margin-bottom: 0.25rem; }
     .info-item .value { color: #2c3e50; font-weight: 600; }
@@ -15,6 +15,11 @@
     .form-group label { display: block; margin-bottom: 0.5rem; color: #34495e; font-weight: bold; }
     .form-group input { width: 100%; padding: 0.75rem; border: 1px solid #bdc3c7; border-radius: 4px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .address-actions { opacity: 1; }
+    @media (max-width: 576px) {
+        .info-row, .form-row { grid-template-columns: 1fr; }
+        .profile-container { padding: 1rem; margin: 0.5rem; }
+    }
     .btn { background: #3498db; color: white; border: none; padding: 0.75rem 2rem; border-radius: 4px; cursor: pointer; font-size: 1rem; }
     .btn:hover { background: #2980b9; }
     .btn-edit { background: #e67e22; }

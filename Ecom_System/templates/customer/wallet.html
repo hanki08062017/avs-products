@@ -5,21 +5,20 @@
 {% block content %}
 <style>
 body { background: #f8f9fa; }
-.wallet-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 2rem; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 1.5rem; }
+.wallet-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 1.5rem; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 1.5rem; }
 .wallet-card.avs { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 .balance-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem; }
-.balance-amount { font-size: 2.5rem; font-weight: bold; }
-.table-container { background: white; border-radius: 10px; padding: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+.balance-amount { font-size: 2rem; font-weight: bold; }
+.table-container { background: white; border-radius: 10px; padding: 1.25rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow-x: auto; }
+.status-badge { padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 .status-successful { background: #27ae60; color: white; }
 .status-pending { background: #f39c12; color: white; }
 .status-processing { background: #3498db; color: white; }
 .status-failed { background: #e74c3c; color: white; }
-.no-transactions { text-align: center; padding: 3rem; color: #7f8c8d; }
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; min-width: 500px; }
 thead { background: #2c3e50; color: white; }
-th { padding: 0.5rem; text-align: center; font-weight: 600; }
-td { padding: 0.5rem; border-bottom: 2px solid #e9ecef;}
+th { padding: 0.5rem; text-align: center; font-weight: 600; font-size: 0.85rem; }
+td { padding: 0.5rem; border-bottom: 2px solid #e9ecef; font-size: 0.85rem; }
 tbody tr:hover { background: #a0caf4; }
 </style>
 

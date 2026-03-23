@@ -8,97 +8,127 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; }
-        nav { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-        nav h1 { font-size: 1.5rem; }
-        nav ul { list-style: none; display: flex; gap: 2rem; align-items: center; }
-        nav a { color: white; text-decoration: none; }
-        nav a:hover { color: #3498db; }
-        .cart-icon { position: relative; cursor: pointer; }
-        .cart-count { position: absolute; top: -8px; right: -8px; background: #e74c3c; border-radius: 50%; padding: 2px 6px; font-size: 12px; }
+
+        nav { background: #2c3e50; color: white; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        nav h1 { font-size: 1.3rem; }
+        .nav-links { list-style: none; display: flex; gap: 1.5rem; align-items: center; margin: 0; }
+        .nav-links a { color: white; text-decoration: none; font-size: 0.95rem; }
+        .nav-links a:hover { color: #3498db; }
+
+        .hamburger { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0.25rem; }
+
+        .mobile-menu { display: none; background: #34495e; padding: 1rem 1.5rem; flex-direction: column; gap: 0.75rem; }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a { color: white; text-decoration: none; font-size: 1rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+        .cart-icon { position: relative; }
+        .cart-count { position: absolute; top: -8px; right: -8px; background: #e74c3c; border-radius: 50%; padding: 2px 6px; font-size: 11px; }
+
         .profile-dropdown { position: relative; }
-        .profile-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .profile-btn { background: none; border: none; color: white; cursor: pointer; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
         .profile-btn:hover { color: #3498db; }
-        .dropdown-menu-custom { display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); min-width: 150px; margin-top: 0.5rem; }
+        .dropdown-menu-custom { display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); min-width: 160px; margin-top: 0.5rem; z-index: 2000; }
         .dropdown-menu-custom.show { display: block; }
-        .dropdown-menu-custom a { color: #2c3e50; padding: 0.75rem 1rem; display: block; }
+        .dropdown-menu-custom a { color: #2c3e50; padding: 0.75rem 1rem; display: block; font-size: 0.9rem; }
         .dropdown-menu-custom a:hover { background: #f8f9fa; }
-        main { padding: 2rem; }
+
+        main { padding: 1.5rem; }
+
+        @media (max-width: 768px) {
+            .hamburger { display: block; }
+            .nav-links { display: none; }
+            main { padding: 1rem; }
+            nav { padding: 0.75rem 1rem; }
+        }
     </style>
 </head>
 <body>
+    <div style="position:sticky; top:0; z-index:1000;">
     <nav>
-        <div style="display: flex; align-items: center; gap: 3rem;">
+        <div style="display:flex; align-items:center; gap:1.5rem;">
             <h1>AVS Products</h1>
-            <ul style="margin: 0;">
+            <ul class="nav-links">
                 <li><a href="{% url 'home' %}">Home</a></li>
                 <li><a href="{% url 'order_history' %}">Orders</a></li>
             </ul>
         </div>
-        <ul style="margin: 0;">
-            {% if user and user.username %}
-            <li class="profile-dropdown">
-                <button class="profile-btn" onclick="toggleProfileDropdown()">
-                    <span>{{ user.first_name }} {% if user.middle_name %}{{ user.middle_name }} {% endif %}{{ user.last_name }}</span>
-                    <span>▼</span>
-                </button>
-                <div class="dropdown-menu-custom" id="profileDropdown">
-                    <a href="{% url 'profile' user.username %}">Profile</a>
-                    <a href="{% url 'wallet' %}">Wallet</a>
-                    <a href="{% url 'payment_history' %}">Payment History</a>
-                    <a href="{% url 'logout' %}">Logout</a>
-                </div>
-            </li>
-            {% else %}
-            <li><a href="{% url 'login' %}">Login</a></li>
-            {% endif %}
-            <li class="cart-icon">
-                <a href="{% url 'checkout' %}">🛒 Cart <span class="cart-count" id="cartCount">0</span></a>
-            </li>
-        </ul>
+        <div style="display:flex; align-items:center; gap:1rem;">
+            <ul class="nav-links" style="margin:0;">
+                {% if user and user.username %}
+                <li class="profile-dropdown">
+                    <button class="profile-btn" onclick="toggleProfileDropdown()">
+                        <span>{{ user.first_name }} {{ user.last_name }}</span><span>▼</span>
+                    </button>
+                    <div class="dropdown-menu-custom" id="profileDropdown">
+                        <a href="{% url 'profile' user.username %}">Profile</a>
+                        <a href="{% url 'wallet' %}">Wallet</a>
+                        <a href="{% url 'payment_history' %}">Payment History</a>
+                        <a href="{% url 'logout' %}">Logout</a>
+                    </div>
+                </li>
+                {% else %}
+                <li><a href="{% url 'login' %}">Login</a></li>
+                {% endif %}
+                <li class="cart-icon">
+                    <a href="{% url 'checkout' %}" style="color:white; text-decoration:none;">🛒 <span class="cart-count" id="cartCount">0</span></a>
+                </li>
+            </ul>
+            <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+        </div>
     </nav>
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-    <footer style="background: #2c3e50; color: white; padding: 3rem 2rem 1rem; margin-top: 3rem;">
+
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="{% url 'home' %}">🏠 Home</a>
+        <a href="{% url 'order_history' %}">📦 Orders</a>
+        <a href="{% url 'checkout' %}">🛒 Cart</a>
+        {% if user and user.username %}
+        <a href="{% url 'profile' user.username %}">👤 Profile</a>
+        <a href="{% url 'wallet' %}">💰 Wallet</a>
+        <a href="{% url 'payment_history' %}">💳 Payment History</a>
+        <a href="{% url 'logout' %}">🚪 Logout</a>
+        {% else %}
+        <a href="{% url 'login' %}">🔑 Login</a>
+        {% endif %}
+    </div>
+    </div>
+
+    <main>{% block content %}{% endblock %}</main>
+
+    <footer style="background:#2c3e50; color:white; padding:2rem 1.5rem 1rem; margin-top:3rem;">
         <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-3">
-                    <h5 style="margin-bottom: 1rem; font-weight: bold;">About Us</h5>
-                    <p style="font-size: 0.9rem; line-height: 1.6;">AVS Products is your trusted online marketplace for quality products at competitive prices.</p>
+            <div class="row g-4">
+                <div class="col-6 col-md-3">
+                    <h6 style="font-weight:bold; margin-bottom:0.75rem;">About Us</h6>
+                    <p style="font-size:0.85rem; line-height:1.6; color:#ecf0f1;">AVS Products — your trusted marketplace for quality products.</p>
                 </div>
-                <div class="col-md-3">
-                    <h5 style="margin-bottom: 1rem; font-weight: bold;">Quick Links</h5>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="margin-bottom: 0.5rem;"><a href="{% url 'home' %}" style="color: #ecf0f1; text-decoration: none;">Home</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="#" style="color: #ecf0f1; text-decoration: none;">About</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="#" style="color: #ecf0f1; text-decoration: none;">Privacy Policy</a></li>
-                        <li style="margin-bottom: 0.5rem;"><a href="#" style="color: #ecf0f1; text-decoration: none;">Terms & Conditions</a></li>
+                <div class="col-6 col-md-3">
+                    <h6 style="font-weight:bold; margin-bottom:0.75rem;">Quick Links</h6>
+                    <ul style="list-style:none; padding:0; font-size:0.85rem;">
+                        <li><a href="{% url 'home' %}" style="color:#ecf0f1; text-decoration:none;">Home</a></li>
+                        <li><a href="#" style="color:#ecf0f1; text-decoration:none;">Privacy Policy</a></li>
+                        <li><a href="#" style="color:#ecf0f1; text-decoration:none;">Terms & Conditions</a></li>
                     </ul>
                 </div>
-                <div class="col-md-3">
-                    <h5 style="margin-bottom: 1rem; font-weight: bold;">Contact Info</h5>
-                    <p style="font-size: 0.9rem; line-height: 1.8; margin: 0;">
-                        <strong>Email:</strong> info@avsproducts.com<br>
-                        <strong>Phone:</strong> +91 1234567890<br>
-                        <strong>Address:</strong> 123 Business Street, City, State - 123456
+                <div class="col-6 col-md-3">
+                    <h6 style="font-weight:bold; margin-bottom:0.75rem;">Contact</h6>
+                    <p style="font-size:0.85rem; line-height:1.8; color:#ecf0f1; margin:0;">
+                        info@avsproducts.com<br>+91 1234567890
                     </p>
                 </div>
-                <div class="col-md-3">
-                    <h5 style="margin-bottom: 1rem; font-weight: bold;">Follow Us</h5>
-                    <div style="display: flex; gap: 1rem; font-size: 1.5rem;">
-                        <a href="#" style="color: #ecf0f1; text-decoration: none;">📘</a>
-                        <a href="#" style="color: #ecf0f1; text-decoration: none;">🐦</a>
-                        <a href="#" style="color: #ecf0f1; text-decoration: none;">📷</a>
-                        <a href="#" style="color: #ecf0f1; text-decoration: none;">💼</a>
+                <div class="col-6 col-md-3">
+                    <h6 style="font-weight:bold; margin-bottom:0.75rem;">Follow Us</h6>
+                    <div style="display:flex; gap:1rem; font-size:1.4rem;">
+                        <a href="#" style="color:#ecf0f1;">📘</a>
+                        <a href="#" style="color:#ecf0f1;">🐦</a>
+                        <a href="#" style="color:#ecf0f1;">📷</a>
                     </div>
                 </div>
             </div>
-            <hr style="border-color: #34495e; margin: 2rem 0 1rem;">
-            <div class="text-center" style="font-size: 0.9rem; color: #95a5a6;">
-                <p style="margin: 0;">&copy; 2024 AVS Products. All Rights Reserved.</p>
-            </div>
+            <hr style="border-color:#34495e; margin:1.5rem 0 1rem;">
+            <p class="text-center" style="font-size:0.85rem; color:#95a5a6; margin:0;">&copy; 2024 AVS Products. All Rights Reserved.</p>
         </div>
     </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function updateCartCount() {
@@ -106,20 +136,18 @@
             const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
             document.getElementById('cartCount').textContent = count;
         }
-        
         function toggleProfileDropdown() {
             document.getElementById('profileDropdown').classList.toggle('show');
         }
-        
-        window.onclick = function(event) {
-            if (!event.target.matches('.profile-btn') && !event.target.closest('.profile-btn')) {
-                const dropdown = document.getElementById('profileDropdown');
-                if (dropdown && dropdown.classList.contains('show')) {
-                    dropdown.classList.remove('show');
-                }
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('open');
+        }
+        window.onclick = function(e) {
+            if (!e.target.closest('.profile-dropdown')) {
+                const d = document.getElementById('profileDropdown');
+                if (d) d.classList.remove('show');
             }
         }
-        
         updateCartCount();
         window.addEventListener('storage', updateCartCount);
     </script>
