@@ -1,0 +1,1 @@
+web: gunicorn Ecom_System.wsgi --chdir Ecom_System
