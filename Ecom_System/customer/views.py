@@ -264,7 +264,7 @@ def place_order(request):
             'total_amount': request.POST.get('total_amount')
         }
         return redirect('confirm_order')
-    
+        
     # Load saved addresses
     from customer.models import Customer, SavedAddress
     username = request.session.get('user_id')
@@ -374,6 +374,7 @@ def change_password(request):
             success = 'Password changed successfully'
     return render(request, 'customer/change_password.html', {'user': user, 'error': error, 'success': success})
 
+def _build_delivery_data(ship_pin):
     import json
     business = BusinessDetail.objects.first()
     delivery_settings, _ = DeliverySettings.objects.get_or_create(business_code=business)
