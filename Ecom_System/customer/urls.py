@@ -21,5 +21,6 @@ urlpatterns = [
     path('set-default-address/', views.set_default_address, name='set_default_address'),
     path('delete-address/<int:address_id>/', views.delete_address, name='delete_address'),
     path('edit-address/<int:address_id>/', views.edit_address, name='edit_address'),
+    path('change-password/', views.change_password, name='change_password'),
     path('check-username/', views.check_username, name='check_username'),
 ]

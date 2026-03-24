@@ -32,6 +32,7 @@ urlpatterns = [
     path('seller/view-staff/<str:staff_id>/', views.view_staff, name='view_staff'),
     path('seller/edit-staff/<str:staff_id>/', views.edit_staff, name='edit_staff'),
     path('seller/get-report/', views.get_report, name='get_report'),
+    path('<str:username>/change-password/', views.staff_change_password, name='staff_change_password'),
     path('seller/profile/send-otp-email/', views.send_otp_email, name='send_otp_email'),
     path('seller/profile/verify-otp-email/', views.verify_otp_email, name='verify_otp_email'),
     path('seller/profile/send-otp-phone/', views.send_otp_phone, name='send_otp_phone'),

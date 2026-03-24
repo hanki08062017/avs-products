@@ -352,7 +352,28 @@ def profile_view(request, username):
         return redirect('login')
 
 
-def _build_delivery_data(ship_pin):
+def change_password(request):
+    if not request.session.get('is_logged_in'):
+        return redirect('login')
+    username = request.session.get('user_id')
+    user = Customer.objects.get(username=username)
+    error, success = None, None
+    if request.method == 'POST':
+        current = request.POST.get('current_password')
+        new_pw = request.POST.get('new_password')
+        confirm = request.POST.get('confirm_password')
+        if user.password != current:
+            error = 'Current password is incorrect'
+        elif new_pw != confirm:
+            error = 'New passwords do not match'
+        elif len(new_pw) < 6:
+            error = 'Password must be at least 6 characters'
+        else:
+            user.password = new_pw
+            user.save()
+            success = 'Password changed successfully'
+    return render(request, 'customer/change_password.html', {'user': user, 'error': error, 'success': success})
+
     import json
     business = BusinessDetail.objects.first()
     delivery_settings, _ = DeliverySettings.objects.get_or_create(business_code=business)

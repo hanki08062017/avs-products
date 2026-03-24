@@ -1002,6 +1002,28 @@ def update_refund_status(request):
     return JsonResponse({'success': False})
 
 
+def staff_change_password(request, username):
+    if not request.session.get('is_logged_in'):
+        return redirect('staff_login')
+    user = StaffUser.objects.get(username=username)
+    error, success = None, None
+    if request.method == 'POST':
+        current = request.POST.get('current_password')
+        new_pw = request.POST.get('new_password')
+        confirm = request.POST.get('confirm_password')
+        if user.password != current:
+            error = 'Current password is incorrect'
+        elif new_pw != confirm:
+            error = 'New passwords do not match'
+        elif len(new_pw) < 6:
+            error = 'Password must be at least 6 characters'
+        else:
+            user.password = new_pw
+            user.save()
+            success = 'Password changed successfully'
+    return render(request, 'seller/change_password.html', {'user': user, 'error': error, 'success': success})
+
+
 def send_otp_email(request):
     if not request.session.get('is_logged_in') or request.method != 'POST':
         return JsonResponse({'success': False})
