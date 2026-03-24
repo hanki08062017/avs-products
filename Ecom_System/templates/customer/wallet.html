@@ -17,8 +17,8 @@ body { background: #f8f9fa; }
 .status-failed { background: #e74c3c; color: white; }
 table { width: 100%; border-collapse: collapse; min-width: 500px; }
 thead { background: #2c3e50; color: white; }
-th { padding: 0.5rem; text-align: center; font-weight: 600; font-size: 0.85rem; }
-td { padding: 0.5rem; border-bottom: 2px solid #e9ecef; font-size: 0.85rem; }
+th { padding: 0.5rem; text-align: center; font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+td { padding: 0.5rem; border-bottom: 2px solid #e9ecef; font-size: 0.85rem; white-space: nowrap; }
 tbody tr:hover { background: #a0caf4; }
 </style>
 
@@ -26,42 +26,30 @@ tbody tr:hover { background: #a0caf4; }
     <h2 class="mb-4" style="color: #2c3e50; font-weight: bold;">My Wallet</h2>
     
     <div class="row">
-        <div class="col-md-6">
-            <div class="wallet-card">
-                <div class="balance-label">Normal Wallet</div>
-                <div class="balance-amount">₹{% if normal_wallet %}{{ normal_wallet.wallet_amount }}{% else %}0.00{% endif %}</div>
-                <div style="margin-top: 1.5rem;">
-                    <button class="btn btn-light" onclick="showAddMoneyModal('Other')" style="padding: 0.5rem 1.5rem;">Add Money</button>
-                </div>
-            </div>
-        </div>
+
         <div class="col-md-6">
             <div class="wallet-card avs">
                 <div class="balance-label">AVS Wallet</div>
                 {% if linked_wallets %}
-                    <table style="width: 100%; margin-top: 1rem; font-size: 0.9rem;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.3);">
-                                <th style="padding: 0.5rem; text-align: left; color: rgba(255,255,255,0.9);">Customer ID</th>
-                                <th style="padding: 0.5rem; text-align: right; color: rgba(255,255,255,0.9);">Amount</th>
-                                <th style="padding: 0.5rem; text-align: center; color: rgba(255,255,255,0.9);">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for wallet in linked_wallets %}
-                            <tr>
-                                <td style="padding: 0.3rem 0.5rem; color: white;">{{ wallet.customer_id }}</td>
-                                <td style="padding: 0.3rem 0.5rem; text-align: right; color: white;">₹{{ wallet.wallet_amount }}</td>
-                                <td style="padding: 0.3rem 0.5rem; text-align: center;"><button onclick="removeAVSWallet('{{ wallet.wallet_id }}')" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">×</button></td>
-                            </tr>
-                            {% endfor %}
-                            <tr style="border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
-                                <td style="padding: 0.5rem; color: white;">Total</td>
-                                <td style="padding: 0.5rem; text-align: right; color: white; font-size: 1.2rem;">₹{{ avs_total }}</td>
-                                <td style="padding: 0.5rem;"></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.2); font-size: 0.8rem; opacity: 0.85;">
+                            <span style="flex: 1;">Customer ID</span>
+                            <span style="width: 80px; text-align: right;">Amount</span>
+                            <span style="width: 30px;"></span>
+                        </div>
+                        {% for wallet in linked_wallets %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <span style="flex: 1; color: white; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem;">{{ wallet.customer_id }}</span>
+                            <span style="width: 80px; text-align: right; color: white; font-size: 0.85rem; white-space: nowrap;">₹{{ wallet.wallet_amount }}</span>
+                            <span style="width: 30px; text-align: right;"><button onclick="removeAVSWallet('{{ wallet.wallet_id }}')" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.8rem;">×</button></span>
+                        </div>
+                        {% endfor %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-top: 1px solid rgba(255,255,255,0.3); font-weight: bold;">
+                            <span style="flex: 1; color: white;">Total</span>
+                            <span style="width: 80px; text-align: right; color: white; font-size: 1.1rem;">₹{{ avs_total }}</span>
+                            <span style="width: 30px;"></span>
+                        </div>
+                    </div>
                 {% else %}
                     <div class="balance-amount">₹0.00</div>
                 {% endif %}
@@ -102,10 +90,11 @@ tbody tr:hover { background: #a0caf4; }
     </div>
     {% endif %}
     
+    {% if linked_wallets %}
     <div class="table-container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 style="color: #2c3e50; font-weight: bold; margin: 0;">Wallet Transactions</h5>
-            <input type="text" id="avsSearch" class="form-control" placeholder="Search by AVS ID" style="max-width: 250px;" onkeyup="filterTransactions()">
+        <div class="d-flex justify-content-between align-items-center mb-3" style="gap: 0.5rem;">
+            <h5 style="color: #2c3e50; font-weight: bold; margin: 0; white-space: nowrap;">Wallet Transactions</h5>
+            <input type="text" id="avsSearch" class="form-control" placeholder="Search by AVS ID" style="max-width: 200px; min-width: 120px;" onkeyup="filterTransactions()">
         </div>
         {% if transactions %}
         <table id="transactionsTable">
@@ -113,10 +102,8 @@ tbody tr:hover { background: #a0caf4; }
                 <tr>
                     <th>Transaction ID</th>
                     <th>Amount</th>
-                    <th>Type</th>
                     <th>Order ID</th>
                     <th>AVS ID</th>
-                    <th>Status</th>
                     <th>Date</th>
                 </tr>
             </thead>
@@ -127,10 +114,8 @@ tbody tr:hover { background: #a0caf4; }
                     <td style="font-weight: bold; {% if txn.transaction_type == 'Debit' %}color: #e74c3c;{% else %}color: #27ae60;{% endif %}">
                         {% if txn.transaction_type == 'Debit' %}-{% else %}+{% endif %}₹{{ txn.amount }}
                     </td>
-                    <td>{{ txn.transaction_type }}</td>
                     <td>{{ txn.reference_order.order_id }}</td>
                     <td>{% if txn.avs_wallet_id %}{% for wallet in linked_wallets %}{% if wallet.wallet_id == txn.avs_wallet_id %}<span style="background: #f093fb; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ wallet.customer_id }}</span>{% endif %}{% endfor %}{% else %}-{% endif %}</td>
-                    <td><span class="status-badge status-{{ txn.status|lower }}">{{ txn.status }}</span></td>
                     <td style="color: #7f8c8d;">{{ txn.created_at|date:"d M Y, h:i A" }}</td>
                 </tr>
                 {% endfor %}
@@ -146,6 +131,7 @@ tbody tr:hover { background: #a0caf4; }
         </div>
         {% endif %}
     </div>
+    {% endif %}
 </div>
 
 <!-- Add Money Modal -->

@@ -46,7 +46,12 @@ body { background: #f8f9fa; }
 .tracking-step.completed:after { background: #27ae60; }
 .tracking-label { font-weight: 600; color: #2c3e50; }
 .tracking-time { color: #7f8c8d; font-size: 0.85rem; }
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+@media (max-width: 768px) {
+    .tracking-label { font-size: 0.75rem; }
+    .tracking-time { font-size: 0.7rem; }
+    .tracking-step { padding-bottom: 1rem; }
+}
+.modal { display: none; position: fixed; z-index: 500; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
 .modal.show { display: flex; align-items: center; justify-content: center; }
 .modal-content { background: white; border-radius: 10px; padding: 2rem; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
 .modal-close { position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem; cursor: pointer; color: #7f8c8d; }
@@ -54,12 +59,20 @@ body { background: #f8f9fa; }
 .tracking-horizontal { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem; background: #f8f9fa; border-radius: 8px; margin: 1rem 0; position: relative; overflow-x: auto; }
 .order-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 1rem; margin-bottom: 1rem; cursor: pointer; gap: 0.5rem; }
 .detail-item { font-size: 0.85rem; }
+.order-mobile { display: none; }
 @media (max-width: 768px) {
-    .order-card { padding: 1rem; }
-    .order-header { flex-direction: column; align-items: flex-start; }
-    .tracking-horizontal { gap: 0; }
+    .order-card { padding: 0.75rem; }
+    .order-header { display: block; border-bottom: 2px solid #e9ecef; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
+    .order-header:hover { background: none; padding: 0; margin-bottom: 0.75rem; }
+    .order-desktop { display: none !important; }
+    .order-mobile { display: block; }
+    .order-mobile-row { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; flex-wrap: nowrap; }
+    .order-mobile-row .order-date { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .order-mobile-row .view-details-btn { flex-shrink: 0; margin-left: auto; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    .tracking-horizontal { display: none; }
     .h-step-label { font-size: 0.7rem; }
     .h-step-time { font-size: 0.65rem; }
+    .modal { top: 50px; height: calc(100% - 50px); align-items: flex-start; padding-top: 1rem; z-index: 500; }
     .modal-content { width: 95%; padding: 1rem; max-height: 90vh; }
 }
 .h-step { display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; position: relative; }
@@ -78,37 +91,58 @@ body { background: #f8f9fa; }
         {% for order in orders %}
         <div class="order-card{% if order.order_status == 'Delivered' or order.order_status == 'Cancelled' %} compact{% endif %}">
             <div class="order-header" onclick="showOrderDetailsModal('{{ order.order_id }}')" style="cursor: pointer;">
-                <div>
-                    <div class="order-id" style="color: #2c3e50;">{{ order.order_id }}</div>
+                <!-- Mobile layout -->
+                <div class="order-mobile">
+                    <div class="order-id">{{ order.order_id }}</div>
                     <div class="order-date">Placed on {{ order.placed_at|date:"d M Y, h:i A" }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Total Amount</div>
-                    <div class="detail-value" style="font-size: 1.2rem; font-weight: bold; color: #27ae60;">₹{{ order.total_amount }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Payment Method</div>
-                    <div class="detail-value">{{ order.payment_method }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Payment Status</div>
-                    <div class="detail-value">{{ order.payment_status }}</div>
-                </div>
-                <div style="text-align: right;">
-                    <span class="status-badge status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
-                    <div class="order-date" style="margin-top: 0.3rem;">
-                        {% if order.order_status == 'Placed' and order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}
-                        {% elif order.order_status == 'Confirmed' and order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}
-                        {% elif order.order_status == 'Processing' and order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}
-                        {% elif order.order_status == 'Shipped' and order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}
-                        {% elif order.order_status == 'Delivered' and order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}
-                        {% elif order.order_status == 'Cancelled' and order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}
-                        {% endif %}
+                    <div class="order-mobile-row">
+                        <span class="status-badge status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
+                        <span class="order-date">
+                            {% if order.order_status == 'Placed' and order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Confirmed' and order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Processing' and order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Shipped' and order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Delivered' and order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Cancelled' and order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}
+                            {% endif %}
+                        </span>
+                        <button class="view-details-btn" style="background: #9b59b6;" onclick="event.stopPropagation(); showTrackingModal('{{ order.order_id }}')">Track Order</button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                <button class="view-details-btn" style="background: #9b59b6;" onclick="event.stopPropagation(); showTrackingModal('{{ order.order_id }}')">Track Order</button>
-            </div>
+                <!-- Desktop layout -->
+                <div class="order-desktop" style="display: contents;">
+                    <div>
+                        <div class="order-id" style="color: #2c3e50;">{{ order.order_id }}</div>
+                        <div class="order-date">Placed on {{ order.placed_at|date:"d M Y, h:i A" }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Total Amount</div>
+                        <div class="detail-value" style="font-size: 1.2rem; font-weight: bold; color: #27ae60;">₹{{ order.total_amount }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Payment Method</div>
+                        <div class="detail-value">{{ order.payment_method }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Payment Status</div>
+                        <div class="detail-value">{{ order.payment_status }}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-badge status-{{ order.order_status|lower }}">{{ order.order_status }}</span>
+                        <div class="order-date" style="margin-top: 0.3rem;">
+                            {% if order.order_status == 'Placed' and order.placed_at %}{{ order.placed_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Confirmed' and order.confirmed_at %}{{ order.confirmed_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Processing' and order.processing_at %}{{ order.processing_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Shipped' and order.shipped_at %}{{ order.shipped_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Delivered' and order.delivered_at %}{{ order.delivered_at|date:"d M Y, h:i A" }}
+                            {% elif order.order_status == 'Cancelled' and order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="view-details-btn" style="background: #9b59b6;" onclick="event.stopPropagation(); showTrackingModal('{{ order.order_id }}')">Track Order</button>
+                    </div>
+                </div>
             </div>
             
             {% if order.order_status != 'Delivered' and order.order_status != 'Cancelled' %}
@@ -216,12 +250,30 @@ const trackingData = {
     {% endfor %}
 };
 
+function getNavHeight() {
+    const nav = document.querySelector('div[style*="sticky"]') || document.querySelector('nav');
+    return nav ? nav.closest('div') ? nav.closest('div').offsetHeight : nav.offsetHeight : 50;
+}
+
+function applyModalOffset(modal) {
+    if (window.innerWidth <= 768) {
+        const h = getNavHeight();
+        modal.style.top = h + 'px';
+        modal.style.height = 'calc(100% - ' + h + 'px)';
+    } else {
+        modal.style.top = '';
+        modal.style.height = '';
+    }
+}
+
 function showTrackingModal(orderId) {
     const modal = document.getElementById('trackingModal');
     const content = document.getElementById('modalTrackingContent');
     const tracking = trackingData[orderId];
-    
-    let html = '<div style="display: flex; gap: 2rem;">';
+    const isMobile = window.innerWidth <= 768;
+    const fs = isMobile ? '0.75rem' : '0.9rem';
+
+    let html = '<div style="display: flex; gap: ' + (isMobile ? '1rem' : '2rem') + ';">';
     html += '<div style="flex: 1;">';
     html += '<div class="tracking-timeline">';
     
@@ -260,9 +312,9 @@ function showTrackingModal(orderId) {
     
     html += '</div></div>';
     
-    html += '<div style="flex: 0 0 250px; background: #f8f9fa; padding: 1rem; border-radius: 8px;">';
-    html += '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 1rem;">Delivery Details</h6>';
-    html += '<div style="color: #2c3e50; font-size: 0.9rem; line-height: 1.6;">';
+    html += '<div style="flex: 0 0 ' + (isMobile ? '130px' : '250px') + '; background: #f8f9fa; padding: ' + (isMobile ? '0.5rem' : '1rem') + '; border-radius: 8px; font-size: ' + fs + ';">';
+    html += '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 0.5rem; font-size: ' + fs + ';">Delivery Details</h6>';
+    html += '<div style="color: #2c3e50; line-height: 1.5;">';
     html += '<strong>Name:</strong> ' + tracking.ship_name + '<br>';
     html += '<strong>Phone:</strong> ' + tracking.ship_phone + '<br>';
     html += '<strong>Address:</strong> ' + tracking.ship_address1;
@@ -271,6 +323,7 @@ function showTrackingModal(orderId) {
     html += '</div></div></div>';
     
     content.innerHTML = html;
+    applyModalOffset(modal);
     modal.classList.add('show');
 }
 
@@ -295,14 +348,18 @@ function showOrderDetailsModal(orderId) {
     invoiceBtn.onclick = function() { window.open('/view-invoice/' + orderId + '/', '_blank'); };
     invoiceBtn.style.display = trackingData[orderId].order_status === 'Delivered' ? 'inline-block' : 'none';
     
-    let html = '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 1rem;">Order Items</h6>';
+    const isMobile = window.innerWidth <= 768;
+    const fs = isMobile ? '0.75rem' : '0.9rem';
+    const pad = isMobile ? '0.35rem 0.4rem' : '0.75rem';
+
+    let html = '<h6 style="color: #2c3e50; font-weight: bold; margin-bottom: 0.75rem;">Order Items</h6>';
     if (items && Array.isArray(items) && items.length > 0) {
-        html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">';
+        html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: ' + fs + ';">';
         html += '<thead><tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">';
-        html += '<th style="padding: 0.75rem; text-align: left;">Product</th>';
-        html += '<th style="padding: 0.75rem; text-align: center;">Quantity</th>';
-        html += '<th style="padding: 0.75rem; text-align: right;">Price</th>';
-        html += '<th style="padding: 0.75rem; text-align: right;">Total</th>';
+        html += '<th style="padding: ' + pad + '; text-align: left;">Product</th>';
+        html += '<th style="padding: ' + pad + '; text-align: center;">Qty</th>';
+        html += '<th style="padding: ' + pad + '; text-align: right;">Price</th>';
+        html += '<th style="padding: ' + pad + '; text-align: right;">Total</th>';
         html += '</tr></thead><tbody>';
         
         let subtotal = 0, totalMRP = 0;
@@ -310,10 +367,10 @@ function showOrderDetailsModal(orderId) {
             subtotal += (item.price || 0) * (item.quantity || 0);
             totalMRP += ((item.mrp || item.price) || 0) * (item.quantity || 0);
             html += '<tr style="border-bottom: 1px solid #dee2e6;">';
-            html += '<td style="padding: 0.75rem;">' + (item.name || 'N/A') + '</td>';
-            html += '<td style="padding: 0.75rem; text-align: center;">' + (item.quantity || 0) + '</td>';
-            html += '<td style="padding: 0.75rem; text-align: right;">₹' + (item.price || 0).toFixed(2) + '</td>';
-            html += '<td style="padding: 0.75rem; text-align: right; font-weight: bold;">₹' + ((item.price || 0) * (item.quantity || 0)).toFixed(2) + '</td>';
+            html += '<td style="padding: ' + pad + ';">' + (item.name || 'N/A') + '</td>';
+            html += '<td style="padding: ' + pad + '; text-align: center;">' + (item.quantity || 0) + '</td>';
+            html += '<td style="padding: ' + pad + '; text-align: right;">₹' + (item.price || 0).toFixed(2) + '</td>';
+            html += '<td style="padding: ' + pad + '; text-align: right; font-weight: bold;">₹' + ((item.price || 0) * (item.quantity || 0)).toFixed(2) + '</td>';
             html += '</tr>';
         });
         html += '</tbody></table>';
@@ -344,6 +401,7 @@ function showOrderDetailsModal(orderId) {
     }
     
     content.innerHTML = html;
+    applyModalOffset(modal);
     modal.classList.add('show');
 }
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from management.models import BusinessDetail, GSTDetail, ProductCategory, Product, Order, Payment, UnitOfMeasurement, Wallet, ProductImage, Refund, DeliverySettings
+from management.models import BusinessDetail, GSTDetail, ProductCategory, Product, Order, Payment, UnitOfMeasurement, Wallet, ProductImage, Refund, DeliverySettings, WalletTransaction
 
 admin.site.register(BusinessDetail)
 admin.site.register(GSTDetail)
@@ -12,3 +12,4 @@ admin.site.register(UnitOfMeasurement)
 admin.site.register(Wallet)
 admin.site.register(Refund)
 admin.site.register(DeliverySettings)
+admin.site.register(WalletTransaction)

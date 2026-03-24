@@ -16,6 +16,12 @@ body { background: #f8f9fa; }
     
     <div class="row">
         <div class="col-md-8">
+            <!-- Order Summary visible only on mobile -->
+            <div class="payment-container d-block d-md-none">
+                <h4 class="section-title">Order Summary</h4>
+                <div id="orderSummaryMobile"></div>
+            </div>
+
             <div class="payment-container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="section-title mb-0">Payment Method</h4>
@@ -25,8 +31,10 @@ body { background: #f8f9fa; }
                 <div id="cardPayment" style="display: none;">
                     <h5 class="mb-3" style="color: #2c3e50;">
                         <span class="card-icon">💳</span>Card Payment
+                        <span class="badge bg-secondary ms-2" style="font-size: 0.7rem; vertical-align: middle;">Not Available</span>
                     </h5>
-                    <form id="cardForm" method="POST">
+                    <div class="alert alert-secondary" style="color: #6c757d;">Card payment is currently not available.</div>
+                    <form id="cardForm" method="POST" style="display:none;">
                         {% csrf_token %}
                         <input type="hidden" name="payment_method" value="Card">
                         
@@ -61,8 +69,10 @@ body { background: #f8f9fa; }
                 <div id="upiPayment" style="display: none;">
                     <h5 class="mb-3" style="color: #2c3e50;">
                         <span class="card-icon">📱</span>UPI Payment
+                        <span class="badge bg-secondary ms-2" style="font-size: 0.7rem; vertical-align: middle;">Not Available</span>
                     </h5>
-                    <form id="upiForm" method="POST">
+                    <div class="alert alert-secondary" style="color: #6c757d;">UPI payment is currently not available.</div>
+                    <form id="upiForm" method="POST" style="display:none;">
                         {% csrf_token %}
                         <input type="hidden" name="payment_method" value="UPI">
                         
@@ -87,11 +97,7 @@ body { background: #f8f9fa; }
                             <label class="form-label">Select Wallet *</label>
                             <select class="form-control" id="walletSelect" required>
                                 <option value="">-- Select Wallet --</option>
-                                {% if normal_wallet %}
-                                <option value="{{ normal_wallet.wallet_id }}" data-amount="{{ normal_wallet.wallet_amount }}" data-type="Other" data-mobile="">
-                                    Normal Wallet - ₹{{ normal_wallet.wallet_amount }}
-                                </option>
-                                {% endif %}
+
                                 {% for wallet in avs_wallets %}
                                 <option value="{{ wallet.wallet_id }}" data-amount="{{ wallet.wallet_amount }}" data-type="AVS" data-mobile="{{ wallet.customer_mobile }}" data-customer-id="{{ wallet.customer_id }}">
                                     AVS Wallet ({{ wallet.customer_id }}) - ₹{{ wallet.wallet_amount }}
@@ -144,7 +150,7 @@ body { background: #f8f9fa; }
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 d-none d-md-block">
             <div class="payment-container">
                 <h4 class="section-title">Order Summary</h4>
                 <div id="orderSummary"></div>
@@ -180,7 +186,7 @@ function loadOrderSummary() {
     })();
     let total = subtotal + deliveryCharges;
     
-    document.getElementById('orderSummary').innerHTML = `
+    const summaryHtml = `
         <div style="font-size: 0.9rem;">
             <div class="d-flex justify-content-between mb-2">
                 <span>Items:</span>
@@ -210,6 +216,9 @@ function loadOrderSummary() {
             </div>
         </div>
     `;
+    document.getElementById('orderSummary').innerHTML = summaryHtml;
+    const mobile = document.getElementById('orderSummaryMobile');
+    if (mobile) mobile.innerHTML = summaryHtml;
     
     document.getElementById('cardTotal').textContent = total.toFixed(2);
     document.getElementById('upiTotal').textContent = total.toFixed(2);

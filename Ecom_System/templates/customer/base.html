@@ -37,8 +37,18 @@
         @media (max-width: 768px) {
             .hamburger { display: block; }
             .nav-links { display: none; }
-            main { padding: 1rem; }
-            nav { padding: 0.75rem 1rem; }
+            main { padding: 0.6rem; }
+            nav { padding: 0.5rem 0.75rem; }
+            nav h1 { font-size: 1rem; }
+            html { font-size: 13px; }
+            .mobile-menu a { font-size: 0.85rem; }
+            .btn { font-size: 0.78rem; padding: 0.3rem 0.6rem; }
+            .form-control, .form-select { font-size: 0.78rem; }
+            h1 { font-size: 1.3rem; }
+            h2 { font-size: 1.1rem; }
+            h3 { font-size: 1rem; }
+            h4 { font-size: 0.95rem; }
+            h5, h6 { font-size: 0.85rem; }
         }
     </style>
 </head>
@@ -69,10 +79,10 @@
                 {% else %}
                 <li><a href="{% url 'login' %}">Login</a></li>
                 {% endif %}
-                <li class="cart-icon">
-                    <a href="{% url 'checkout' %}" style="color:white; text-decoration:none;">🛒 <span class="cart-count" id="cartCount">0</span></a>
-                </li>
             </ul>
+            <div class="cart-icon">
+                <a href="{% url 'checkout' %}" style="color:white; text-decoration:none; font-size:1.3rem;">🛒<span class="cart-count" id="cartCount">0</span></a>
+            </div>
             <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
         </div>
     </nav>
@@ -133,8 +143,7 @@
     <script>
         function updateCartCount() {
             const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            document.getElementById('cartCount').textContent = count;
+            document.getElementById('cartCount').textContent = cart.length;
         }
         function toggleProfileDropdown() {
             document.getElementById('profileDropdown').classList.toggle('show');
@@ -150,6 +159,20 @@
         }
         updateCartCount();
         window.addEventListener('storage', updateCartCount);
+
+        // Enforce numeric-only, 10-digit on all phone inputs site-wide
+        document.addEventListener('input', function(e) {
+            if (e.target.type === 'tel' || e.target.name === 'phone' || e.target.name === 'phone1' || e.target.name === 'phone2' || e.target.id === 'phoneInput' || e.target.id === 'editPhone' || e.target.placeholder === 'Phone') {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+            }
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('input[type="tel"], input[name="phone"], input[name="phone1"], input[name="phone2"], input[id="phoneInput"], input[id="editPhone"], input[placeholder="Phone"]').forEach(function(el) {
+                el.setAttribute('inputmode', 'numeric');
+                el.setAttribute('maxlength', '10');
+                el.setAttribute('pattern', '[0-9]{10}');
+            });
+        });
     </script>
 </body>
 </html>

@@ -412,18 +412,31 @@ class Wallet(models.Model):
         ('Other', 'Other'),        
     ]
     
-    wallet_id = models.CharField(max_length=50, primary_key=True)
+    wallet_id = models.CharField(max_length=50, primary_key=True, editable=False)
     user_id = models.ForeignKey(Customer, to_field='username', on_delete=models.CASCADE, blank=True, null=True)
     wallet_type = models.CharField(max_length=50, choices=WALLET_TYPE_CHOICES)
     wallet_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     customer_name = models.CharField(max_length=255)
-    customer_id = models.CharField(max_length=50)
+    customer_id = models.CharField(max_length=50, unique=True)
     customer_mobile = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.CharField(max_length=100)
     modified_at = models.DateTimeField(auto_now=True)
     modified_by = models.CharField(max_length=100, blank=True, null=True)
-    
+
+    def save(self, *args, **kwargs):
+        if not self.wallet_id:
+            last = Wallet.objects.order_by('-created_at').values_list('wallet_id', flat=True).first()
+            if last:
+                try:
+                    num = int(last.replace('wallet', '')) + 1
+                except ValueError:
+                    num = Wallet.objects.count() + 1
+            else:
+                num = 1
+            self.wallet_id = f'wallet{num}'
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.customer_name} - Wallet ({self.wallet_id})"
 
@@ -468,6 +481,33 @@ class DeliveryZone(models.Model):
 
     def __str__(self):
         return f"{self.zone_name} ({self.pincode_to})"
+
+
+class WalletTransaction(models.Model):
+    class Meta:
+        db_table = 'business_wallettransaction'
+
+    TRANSACTION_TYPE_CHOICES = [
+        ('Debit', 'Debit'),
+        ('Credit', 'Credit'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    transaction_id = models.CharField(max_length=100, db_index=True)
+    avs_customer_name = models.CharField(max_length=255)
+    avs_customer_id = models.CharField(max_length=50)
+    avs_customer_mobile = models.CharField(max_length=20)
+    avs_customer_mobile = models.CharField(max_length=20)
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reference_order = models.ForeignKey(Order, to_field='order_id', on_delete=models.SET_NULL, blank=True, null=True)
+    transaction_date = models.DateTimeField()
+    transaction_for = models.CharField(max_length=255, blank=True, null=True)
+    transaction_by = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.transaction_id} - {self.avs_customer_name} ({self.transaction_type})"
 
 
 class Refund(models.Model):

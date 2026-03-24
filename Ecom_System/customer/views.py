@@ -110,6 +110,15 @@ def signup_view(request):
     return render(request, 'customer/signup.html')
 
 
+def check_username(request):
+    from django.http import JsonResponse
+    username = request.GET.get('username', '').strip()
+    if not username:
+        return JsonResponse({'available': False})
+    exists = Customer.objects.filter(username=username).exists()
+    return JsonResponse({'available': not exists})
+
+
 def customer_logout_view(request):
     request.session.flush()
     return redirect('home')
@@ -644,7 +653,7 @@ def process_payment(request):
             
             # Deduct amount from wallet if wallet payment
             if payment_method == 'Wallet':
-                from management.models import Wallet as WalletModel
+                from management.models import Wallet as WalletModel, WalletTransaction
                 from decimal import Decimal
                 seller_total_decimal = Decimal(str(seller_total))
                 if avs_wallet_id:
@@ -654,6 +663,18 @@ def process_payment(request):
                         avs_wallet.wallet_amount -= avs_deduct
                         avs_wallet.modified_by = username
                         avs_wallet.save()
+                        WalletTransaction.objects.create(
+                            transaction_id=transaction_id,
+                            avs_customer_name=avs_wallet.customer_name,
+                            avs_customer_id=avs_wallet.customer_id,
+                            avs_customer_mobile=avs_wallet.customer_mobile,
+                            transaction_type='Debit',
+                            amount=avs_deduct,
+                            reference_order=order,
+                            transaction_date=timezone.now(),
+                            transaction_for='Order Payment',
+                            transaction_by=username,
+                        )
                         remaining = seller_total_decimal - avs_deduct
                         if remaining > 0 and normal_wallet_id:
                             normal_wallet = WalletModel.objects.filter(wallet_id=normal_wallet_id).first()

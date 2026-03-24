@@ -76,22 +76,34 @@ body { background: #f8f9fa; }
                         <input type="hidden" name="bill_country" id="bill_country_hidden" value="{{ billing_addresses.0.country }}">
                         <input type="hidden" id="bill_address_id" value="{{ billing_addresses.0.id }}">
                   
-                    {% else%}
+                    {% else %}
+                    {% if customer_address and customer_address.address1 %}
                     <div class="address-card">
-                            <strong>{{ customer_address.full_name }}</strong><br>
-                            Phone: {{ customer_address.phone1 }}<br>
-                            {{ customer_address.address1 }}{% if customer_address.address2 %}, {{ customer_address.address2 }}{% endif %}<br>
-                            {{ customer_address.city }}, {{customer_address.state }} - {{ customer_address.pin }}, {{ customer_address.country }}
-                        </div>
-                        <input type="hidden" name="bill_name" id="bill_name_hidden" value="{{ customer_address.full_name }}">
-                        <input type="hidden" name="bill_phone" id="bill_phone_hidden" value="{{ customer_address.phone1 }}">
-                        <input type="hidden" name="bill_address1" id="bill_address1_hidden" value="{{ customer_address.address1 }}">
-                        <input type="hidden" name="bill_address2" id="bill_address2_hidden" value="{{ customer_address.address2 }}">
-                        <input type="hidden" name="bill_city" id="bill_city_hidden" value="{{ customer_address.city }}">
-                        <input type="hidden" name="bill_state" id="bill_state_hidden" value="{{ customer_address.state }}">
-                        <input type="hidden" name="bill_pin" id="bill_pin_hidden" value="{{ customer_address.pin }}">
-                        <input type="hidden" name="bill_country" id="bill_country_hidden" value="{{ customer_address.country }}">
-                        <input type="hidden" id="bill_address_id" value="{{ customer_address.id }}">
+                        <strong>{{ customer_address.full_name }}</strong><br>
+                        Phone: {{ customer_address.phone1 }}<br>
+                        {{ customer_address.address1 }}{% if customer_address.address2 %}, {{ customer_address.address2 }}{% endif %}<br>
+                        {{ customer_address.city }}, {{ customer_address.state }} - {{ customer_address.pin }}, {{ customer_address.country }}
+                    </div>
+                    <input type="hidden" name="bill_name" id="bill_name_hidden" value="{{ customer_address.full_name }}">
+                    <input type="hidden" name="bill_phone" id="bill_phone_hidden" value="{{ customer_address.phone1 }}">
+                    <input type="hidden" name="bill_address1" id="bill_address1_hidden" value="{{ customer_address.address1 }}">
+                    <input type="hidden" name="bill_address2" id="bill_address2_hidden" value="{{ customer_address.address2 }}">
+                    <input type="hidden" name="bill_city" id="bill_city_hidden" value="{{ customer_address.city }}">
+                    <input type="hidden" name="bill_state" id="bill_state_hidden" value="{{ customer_address.state }}">
+                    <input type="hidden" name="bill_pin" id="bill_pin_hidden" value="{{ customer_address.pin }}">
+                    <input type="hidden" name="bill_country" id="bill_country_hidden" value="{{ customer_address.country }}">
+                    <input type="hidden" id="bill_address_id" value="">
+                    {% else %}
+                    <input type="hidden" name="bill_name" id="bill_name_hidden" value="">
+                    <input type="hidden" name="bill_phone" id="bill_phone_hidden" value="">
+                    <input type="hidden" name="bill_address1" id="bill_address1_hidden" value="">
+                    <input type="hidden" name="bill_address2" id="bill_address2_hidden" value="">
+                    <input type="hidden" name="bill_city" id="bill_city_hidden" value="">
+                    <input type="hidden" name="bill_state" id="bill_state_hidden" value="">
+                    <input type="hidden" name="bill_pin" id="bill_pin_hidden" value="">
+                    <input type="hidden" name="bill_country" id="bill_country_hidden" value="">
+                    <input type="hidden" id="bill_address_id" value="">
+                    {% endif %}
                     {% endif %}
                     </div>
                     
@@ -236,13 +248,19 @@ body { background: #f8f9fa; }
                     </div>
                     
                  
+                    <!-- Order Summary visible only on mobile, just above the button -->
+                    <div class="order-container d-block d-md-none mt-3">
+                        <h5 class="section-title">Order Summary</h5>
+                        <div id="orderSummaryMobile"></div>
+                    </div>
+
                     <button type="submit" class="btn btn-success w-100" style="padding: 1rem; font-size: 1.1rem; font-weight: 600; margin-top:2rem;">Continue to Payment</button>
                 </form>
                 <!-- end orderForm -->
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 d-none d-md-block">
             <div class="order-container">
                 <h4 class="section-title">Order Summary</h4>
                 <div id="orderSummary"></div>
@@ -413,6 +431,8 @@ function loadOrderSummary() {
             </div>
         </div>
     `;
+    const mobile = document.getElementById('orderSummaryMobile');
+    if (mobile) mobile.innerHTML = document.getElementById('orderSummary').innerHTML;
 }
 
 function openBillingModal() {
@@ -923,6 +943,12 @@ function copySameAsBilling() {
 
 function submitOrder(event) {
     event.preventDefault();
+
+    const shipAddr1 = document.getElementById('ship_address1_hidden')?.value || '';
+    if (!shipAddr1.trim()) {
+        alert('Please add a shipping address before continuing.');
+        return;
+    }
 
     let cart = JSON.parse(localStorage.getItem('cart') || '[]');
     let groupedCart = {};

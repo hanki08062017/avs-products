@@ -37,11 +37,12 @@ body { background: #f8f9fa; }
             </div>
             <div class="mb-3">
                 <label class="form-label">Phone *</label>
-                <input type="tel" class="form-control" name="phone" required pattern="[0-9]{10}">
+                <input type="tel" class="form-control" name="phone" required pattern="[0-9]{10}" maxlength="10">
             </div>
             <div class="mb-3">
                 <label class="form-label">Username *</label>
-                <input type="text" class="form-control" name="username" required>
+                <input type="text" class="form-control" name="username" id="username" required autocomplete="off">
+                <div id="username-feedback" class="form-text"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Password *</label>
@@ -59,4 +60,29 @@ body { background: #f8f9fa; }
         </div>
     </div>
 </div>
+
+<script>
+const usernameInput = document.getElementById('username');
+const feedback = document.getElementById('username-feedback');
+let timer;
+usernameInput.addEventListener('input', function () {
+    clearTimeout(timer);
+    const val = this.value.trim();
+    feedback.textContent = '';
+    if (!val) return;
+    timer = setTimeout(() => {
+        fetch(`{% url 'check_username' %}?username=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.available) {
+                    feedback.textContent = '✓ Username is available';
+                    feedback.style.color = 'green';
+                } else {
+                    feedback.textContent = '✗ Username is already taken';
+                    feedback.style.color = 'red';
+                }
+            });
+    }, 400);
+});
+</script>
 {% endblock %}

@@ -44,7 +44,13 @@ body { background: #f8f9fa; }
                 {{ order_data.ship_city }}, {{ order_data.ship_state }} - {{ order_data.ship_pin }}<br>
                 {{ order_data.ship_country }}</p>
             </div>
-            
+
+            <!-- Order Summary visible only on mobile, between order details and payment -->
+            <div class="order-container d-block d-md-none">
+                <h4 class="section-title">Order Summary</h4>
+                <div id="orderSummaryMobile"></div>
+            </div>
+
             <div class="order-container">
                 <h4 class="section-title">Select Payment Method</h4>
                 <form id="paymentForm" method="POST">
@@ -86,7 +92,7 @@ body { background: #f8f9fa; }
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 d-none d-md-block">
             <div class="order-container">
                 <h4 class="section-title">Order Summary</h4>
                 <div id="orderSummary"></div>
@@ -127,7 +133,7 @@ function loadOrderSummary() {
     })();
     let total = subtotal + deliveryCharges;
     
-    document.getElementById('orderSummary').innerHTML = `
+    const html = `
         <div style="font-size: 0.9rem;">
             <div class="d-flex justify-content-between mb-2">
                 <span>Items:</span>
@@ -157,6 +163,9 @@ function loadOrderSummary() {
             </div>
         </div>
     `;
+    document.getElementById('orderSummary').innerHTML = html;
+    const mobile = document.getElementById('orderSummaryMobile');
+    if (mobile) mobile.innerHTML = html;
 }
 
 function selectPayment(method) {
