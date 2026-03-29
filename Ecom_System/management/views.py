@@ -67,32 +67,12 @@ def wallet_transaction_api(request):
         # Auto-create wallet for new AVS customer
         wallet = Wallet.objects.create(
             wallet_type='AVS',
-            wallet_amount=Decimal('0.00'),
             customer_name=avs_customer_name,
             customer_id=avs_customer_id,
             customer_mobile=mobile,
             created_by='API',
         )
 
-    # --- Duplicate transaction_id logic ---
-    # Find the previous latest entry for this transaction_id on this wallet
-    prev = WalletTransaction.objects.filter(
-        transaction_id=transaction_id,
-        avs_customer_id=avs_customer_id
-    ).order_by('-created_at').first()
-
-    if prev:
-        # Reverse the effect of the previous entry before applying the new one
-        if prev.transaction_type == 'Credit':
-            wallet.wallet_amount -= prev.amount
-        else:
-            wallet.wallet_amount += prev.amount
-
-    # Apply new transaction
-    if txn_type == 'Credit':
-        wallet.wallet_amount += amount
-    else:
-        wallet.wallet_amount -= amount
 
     wallet.modified_by = transaction_by
     wallet.save()

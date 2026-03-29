@@ -1,6 +1,7 @@
 import os
 from django.db import models
 from customer.models import Customer
+from django.db.models import Sum, Q, Case, When, DecimalField
 
 def _product_image_path(instance, filename):
     ext = os.path.splitext(filename)[1].lower()
@@ -415,7 +416,6 @@ class Wallet(models.Model):
     wallet_id = models.CharField(max_length=50, primary_key=True, editable=False)
     user_id = models.ForeignKey(Customer, to_field='username', on_delete=models.CASCADE, blank=True, null=True)
     wallet_type = models.CharField(max_length=50, choices=WALLET_TYPE_CHOICES)
-    wallet_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     customer_name = models.CharField(max_length=255)
     customer_id = models.CharField(max_length=50, unique=True)
     customer_mobile = models.CharField(max_length=20)
@@ -439,6 +439,21 @@ class Wallet(models.Model):
 
     def __str__(self):
         return f"{self.customer_name} - Wallet ({self.wallet_id})"
+    
+    @property
+    def wallet_amount(self):
+        transactions = WalletTransaction.objects.filter(avs_customer_id=self.customer_id)
+        result = transactions.aggregate(
+            total_debit=Sum(Case(When(transaction_type='Debit', then='amount'),default=0,output_field=DecimalField())),
+            total_credit=Sum(Case(When(transaction_type='Credit', then='amount'),default=0,output_field=DecimalField())),
+            total_refund=Sum(Case(When(transaction_type='Refund', then='amount'),default=0,output_field=DecimalField()))
+            )
+        debit_amount = result['total_debit'] or 0
+        credit_amount = result['total_credit'] or 0
+        refund_amount = result['total_refund'] or 0
+        net_balance = credit_amount - debit_amount + refund_amount
+        return net_balance or 0
+     
 
 class DeliverySettings(models.Model):
     class Meta:
@@ -490,13 +505,13 @@ class WalletTransaction(models.Model):
     TRANSACTION_TYPE_CHOICES = [
         ('Debit', 'Debit'),
         ('Credit', 'Credit'),
+        ('Refund', 'Refund')
     ]
 
     id = models.AutoField(primary_key=True)
     transaction_id = models.CharField(max_length=100, db_index=True)
     avs_customer_name = models.CharField(max_length=255)
     avs_customer_id = models.CharField(max_length=50)
-    avs_customer_mobile = models.CharField(max_length=20)
     avs_customer_mobile = models.CharField(max_length=20)
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)

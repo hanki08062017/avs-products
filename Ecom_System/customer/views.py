@@ -649,19 +649,19 @@ def process_payment(request):
                 delivery_charge=delivery_charge,
                 sold_by=seller_code,
                 payment_method=payment_method,
-                payment_status='Successful',
+                payment_status='Pending',
                 placed_type='Online',
                 placed_at=timezone.now(),
-                order_status='Confirmed',
-                confirmed_at=timezone.now(),
-                confirmed_by='System',
+                order_status='Pending',
                 created_by=username,
                 items_details=json.dumps(items)
             )
             
             # Create payment record for each order
-            from management.models import Payment
+            from management.models import Payment, Wallet as WalletModel
+            
             transaction_id = f"TXN{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+            avs_wallet = WalletModel.objects.filter(wallet_id=avs_wallet_id).first()
             Payment.objects.create(
                 transaction_id=transaction_id,
                 amount=seller_total,
@@ -669,22 +669,19 @@ def process_payment(request):
                 payment_mode=payment_method,
                 transaction_type='Debit',
                 reference_order=order,
-                avs_wallet_id=avs_wallet_id if payment_method == 'Wallet' else None,
+                avs_wallet_id=avs_wallet.customer_id if payment_method == 'Wallet' else None,
                 created_by=username
             )
             
             # Deduct amount from wallet if wallet payment
             if payment_method == 'Wallet':
-                from management.models import Wallet as WalletModel, WalletTransaction
+                from management.models import WalletTransaction
                 from decimal import Decimal
                 seller_total_decimal = Decimal(str(seller_total))
                 if avs_wallet_id:
                     avs_wallet = WalletModel.objects.filter(wallet_id=avs_wallet_id).first()
                     if avs_wallet:
                         avs_deduct = min(avs_wallet.wallet_amount, seller_total_decimal)
-                        avs_wallet.wallet_amount -= avs_deduct
-                        avs_wallet.modified_by = username
-                        avs_wallet.save()
                         WalletTransaction.objects.create(
                             transaction_id=transaction_id,
                             avs_customer_name=avs_wallet.customer_name,
@@ -694,31 +691,10 @@ def process_payment(request):
                             amount=avs_deduct,
                             reference_order=order,
                             transaction_date=timezone.now(),
-                            transaction_for='Order Payment',
+                            transaction_for='Order Payment from ' + order.sold_by ,
                             transaction_by=username,
                         )
-                        remaining = seller_total_decimal - avs_deduct
-                        if remaining > 0 and normal_wallet_id:
-                            normal_wallet = WalletModel.objects.filter(wallet_id=normal_wallet_id).first()
-                            if normal_wallet and normal_wallet.wallet_amount >= remaining:
-                                normal_wallet.wallet_amount -= remaining
-                                normal_wallet.modified_by = username
-                                normal_wallet.save()
-                            else:
-                                order.payment_status = 'Failed'
-                                order.save()
-                                Payment.objects.filter(transaction_id=transaction_id).update(status='Failed')
-                elif normal_wallet_id:
-                    normal_wallet = WalletModel.objects.filter(wallet_id=normal_wallet_id).first()
-                    if normal_wallet and normal_wallet.wallet_amount >= seller_total_decimal:
-                        normal_wallet.wallet_amount -= seller_total_decimal
-                        normal_wallet.modified_by = username
-                        normal_wallet.save()
-                    else:
-                        order.payment_status = 'Failed'
-                        order.save()
-                        Payment.objects.filter(transaction_id=transaction_id).update(status='Failed')
-            
+
             # Reduce stock for each item
             for item in items:
                 try:
@@ -728,6 +704,12 @@ def process_payment(request):
                 except Product.DoesNotExist:
                     pass
             
+            order.payment_status = 'Successful'
+            order.order_status = 'Confirmed'
+            order.confirmed_at = timezone.now()
+            order.confirmed_by = 'System'
+            order.save()
+
             created_orders.append(order)
         
         del request.session['order_data']
@@ -776,7 +758,7 @@ def wallet_view(request):
     if not request.session.get('is_logged_in'):
         return redirect('login')
     
-    from management.models import Wallet, Payment
+    from management.models import Wallet, WalletTransaction
     from django.http import JsonResponse
     import random
     
@@ -790,6 +772,8 @@ def wallet_view(request):
             customer_id = request.POST.get('customer_id')
             try:
                 wallet = Wallet.objects.get(customer_id=customer_id)
+                if wallet.user_id:
+                    return JsonResponse({'success': False, 'message': 'This wallet is already linked to another customer'})
                 # Send OTP immediately after verification
                 otp = random.randint(100000, 999999)
                 request.session['wallet_otp'] = otp
@@ -889,8 +873,8 @@ def wallet_view(request):
     normal_wallet = Wallet.objects.filter(user_id=user, wallet_type='Other').first()
     avs_wallets = Wallet.objects.filter(wallet_type='AVS').order_by('-created_at')
     linked_wallets = avs_wallets.filter(user_id=user)
-    unlinked_wallets = avs_wallets.filter(user_id__isnull=True)
-    transactions = Payment.objects.filter(Q(payment_mode='Wallet', reference_order__created_by=username) | Q(payment_mode='Wallet', refund_for=username)).order_by('-created_at')
+    # unlinked_wallets = avs_wallets.filter(user_id__isnull=True)
+    transactions = WalletTransaction.objects.filter(Q(avs_customer_id__in=[wallet.customer_id for wallet in linked_wallets])).order_by('-created_at')
     
     # Calculate total AVS wallet amount
     avs_total = sum(wallet.wallet_amount for wallet in linked_wallets)
@@ -898,7 +882,6 @@ def wallet_view(request):
     return render(request, 'customer/wallet.html', {
         'normal_wallet': normal_wallet,
         'linked_wallets': linked_wallets,
-        'unlinked_wallets': unlinked_wallets,
         'transactions': transactions,
         'avs_total': avs_total,
         'user': user

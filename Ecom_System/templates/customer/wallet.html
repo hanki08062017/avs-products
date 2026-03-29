@@ -18,7 +18,7 @@ body { background: #f8f9fa; }
 table { width: 100%; border-collapse: collapse; min-width: 500px; }
 thead { background: #2c3e50; color: white; }
 th { padding: 0.5rem; text-align: center; font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
-td { padding: 0.5rem; border-bottom: 2px solid #e9ecef; font-size: 0.85rem; white-space: nowrap; }
+td { padding: 0.5rem; border-bottom: 2px solid #e9ecef; font-size: 0.85rem; white-space: nowrap; text-align: center;}
 tbody tr:hover { background: #a0caf4; }
 </style>
 
@@ -60,35 +60,6 @@ tbody tr:hover { background: #a0caf4; }
         </div>
     </div>
     
-    {% if unlinked_wallets %}
-    <div class="table-container mt-4">
-        <h5 style="color: #2c3e50; font-weight: bold; margin-bottom: 1.5rem;">Available AVS Wallets</h5>
-        <table>
-            <thead>
-                <tr>
-                    <th>Wallet ID</th>
-                    <th>Customer Name</th>
-                    <th>Customer ID</th>
-                    <th>Balance</th>
-                    <th>Created</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for wallet in unlinked_wallets %}
-                <tr>
-                    <td style="font-weight: 600; color: #2c3e50;">{{ wallet.wallet_id }}</td>
-                    <td>{{ wallet.customer_name }}</td>
-                    <td>{{ wallet.customer_id }}</td>
-                    <td style="font-weight: bold; color: #27ae60;">₹{{ wallet.wallet_amount }}</td>
-                    <td style="color: #7f8c8d;">{{ wallet.created_at|date:"d M Y" }}</td>
-                    <td><button class="btn btn-sm btn-success" onclick="linkWallet('{{ wallet.wallet_id }}')">Link</button></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
     
     {% if linked_wallets %}
     <div class="table-container mt-4">
@@ -102,20 +73,21 @@ tbody tr:hover { background: #a0caf4; }
                 <tr>
                     <th>Transaction ID</th>
                     <th>Amount</th>
-                    <th>Order ID</th>
+                    <th>Reference</th>
                     <th>AVS ID</th>
                     <th>Date</th>
                 </tr>
             </thead>
             <tbody>
                 {% for txn in transactions %}
-                <tr data-avs-id="{% if txn.avs_wallet_id %}{% for wallet in linked_wallets %}{% if wallet.wallet_id == txn.avs_wallet_id %}{{ wallet.customer_id }}{% endif %}{% endfor %}{% endif %}">
-                    <td style="font-weight: 600; color: #2c3e50;">{{ txn.transaction_id }}</td>
+                
+                <tr data-avs-id="{% for wallet in linked_wallets %}{% if wallet.customer_id == txn.avs_customer_id %}{{ wallet.customer_id }}{% endif %}{% endfor %}">
+                    <td style="font-weight: 600; text-align: left; color: #2c3e50;">{{ txn.transaction_id }}</td>
                     <td style="font-weight: bold; {% if txn.transaction_type == 'Debit' %}color: #e74c3c;{% else %}color: #27ae60;{% endif %}">
                         {% if txn.transaction_type == 'Debit' %}-{% else %}+{% endif %}₹{{ txn.amount }}
                     </td>
-                    <td>{{ txn.reference_order.order_id }}</td>
-                    <td>{% if txn.avs_wallet_id %}{% for wallet in linked_wallets %}{% if wallet.wallet_id == txn.avs_wallet_id %}<span style="background: #f093fb; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ wallet.customer_id }}</span>{% endif %}{% endfor %}{% else %}-{% endif %}</td>
+                    <td>{% if txn.reference_order %} {{ txn.reference_order.order_id }} {% else %} {{ txn.transaction_for }}{% endif %}</td>
+                    <td>{% if txn.avs_customer_id %}{% for wallet in linked_wallets %}{% if wallet.customer_id == txn.avs_customer_id %}<span style="background: #f093fb; color: white; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ wallet.customer_id }}</span>{% endif %}{% endfor %}{% else %}-{% endif %}</td>
                     <td style="color: #7f8c8d;">{{ txn.created_at|date:"d M Y, h:i A" }}</td>
                 </tr>
                 {% endfor %}

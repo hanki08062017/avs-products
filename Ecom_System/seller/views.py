@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from management.models import Product, ProductCategory, Order, BusinessDetail, ProductImage
+from management.models import Product, ProductCategory, Order, BusinessDetail, ProductImage, WalletTransaction
 from django.db import models
 from .models import Staff, StaffUser
 from django.contrib import messages
@@ -452,6 +452,7 @@ def update_order_status(request, order_id):
                 
                 payment = Payment.objects.filter(reference_order=order).first()
                 if payment:
+                    refund_txn_id = f"RFND{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
                     Refund.objects.create(
                         reference_order=order,
                         amount=order.total_amount,
@@ -464,7 +465,6 @@ def update_order_status(request, order_id):
                     )
                     
                     # Create payment record for refund
-                    refund_txn_id = f"RFND{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
                     Payment.objects.create(
                         transaction_id=refund_txn_id,
                         amount=order.total_amount,
@@ -967,11 +967,29 @@ def update_refund_status(request):
                     ).first()
                     
                     if original_payment and original_payment.avs_wallet_id:
-                        wallet = Wallet.objects.filter(wallet_id=original_payment.avs_wallet_id).first()
+                        wallet = Wallet.objects.filter(customer_id=original_payment.avs_wallet_id).first()
+                        refund_wallet = Payment.objects.filter(reference_order=refund.reference_order, transaction_type='Refund').first()
+                        wallet_transaction = WalletTransaction.objects.filter(transaction_id=refund_wallet.transaction_id).first()
                         if wallet:
-                            wallet.wallet_amount += Decimal(str(refund.amount))
-                            wallet.modified_by = modifier_name
-                            wallet.save()
+                            if wallet_transaction:
+                                wallet_transaction.amount = Decimal(str(refund.amount))
+                                wallet_transaction.transaction_date = timezone.now()
+                                wallet_transaction.transaction_for = refund_reason
+                                wallet_transaction.transaction_by = modifier_name
+                                wallet_transaction.save()
+                            else:
+                                WalletTransaction.objects.create(
+                                    transaction_id = refund_wallet.transaction_id,
+                                    avs_customer_name = wallet.customer_name,
+                                    avs_customer_id = wallet.customer_id,
+                                    avs_customer_mobile = wallet.customer_mobile,
+                                    transaction_type = 'Refund',
+                                    amount = Decimal(str(refund.amount)),
+                                    reference_order = refund.reference_order,
+                                    transaction_date = timezone.now(),
+                                    transaction_for = refund_reason,
+                                    transaction_by = modifier_name
+                                )
                 
             elif seller_status == 'Reject':
                 refund.refund_status = 'Rejected'
