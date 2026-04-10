@@ -1,0 +1,149 @@
+{% extends "management/base.html" %}
+{% block title %}Import Wallet Transactions{% endblock %}
+{% block page_heading %}Import Wallet Transactions{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+  <!-- Step indicators -->
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <div class="d-flex align-items-center gap-2">
+      <div class="step-dot {% if step == 'upload' %}active{% elif step != 'upload' %}done{% endif %}">1</div>
+      <span style="font-size:.82rem;">Upload File</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="step-dot {% if step == 'map' %}active{% elif step == 'done' %}done{% endif %}">2</div>
+      <span style="font-size:.82rem;">Map Fields</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="step-dot {% if step == 'done' %}active{% endif %}">3</div>
+      <span style="font-size:.82rem;">Result</span>
+    </div>
+  </div>
+
+  {% if result.error %}
+  <div class="alert alert-danger py-2 mb-3" style="font-size:.83rem;"><i class="bi bi-x-circle me-1"></i>{{ result.error }}</div>
+  {% endif %}
+
+  <!-- Step 1: Upload -->
+  {% if step == 'upload' %}
+  <div class="table-card p-4">
+    <h6 class="mb-4"><i class="bi bi-file-earmark-arrow-up me-2 text-primary"></i>Upload CSV or Excel File</h6>
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="upload">
+      <div class="mb-4">
+        <label class="form-label" style="font-size:.82rem;font-weight:500;">Select File <span class="text-danger">*</span></label>
+        <input type="file" name="file" class="form-control form-control-sm" accept=".csv,.xlsx,.xls" required>
+        <div class="mt-1" style="font-size:.75rem;color:#64748b;">Supported: <code>.csv</code>, <code>.xlsx</code>, <code>.xls</code></div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm px-4"><i class="bi bi-arrow-right me-1"></i>Next — Map Fields</button>
+    </form>
+  </div>
+
+  <!-- Step 2: Map fields -->
+  {% elif step == 'map' %}
+  <div class="table-card p-4">
+    <h6 class="mb-1"><i class="bi bi-sliders me-2 text-primary"></i>Map File Columns to Wallet Transaction Fields</h6>
+    <p class="text-muted mb-4" style="font-size:.8rem;">Your file has <strong>{{ file_headers|length }}</strong> columns. Select which column maps to each internal field.</p>
+
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="import">
+
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th style="width:45%;">Internal Field</th>
+              <th>Your File Column</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for internal, label in internal_fields %}
+            <tr>
+              <td>
+                <span style="font-size:.82rem;font-weight:500;">{{ label }}</span>
+              </td>
+              <td>
+                <select name="map_{{ internal }}" class="form-select form-select-sm">
+                  <option value="">— Skip —</option>
+                  {% for h in file_headers %}
+                  <option value="{{ h }}" {% if h|lower == internal|lower or h|lower == internal|lower|cut:"avs_" %}selected{% endif %}>{{ h }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary btn-sm px-4"><i class="bi bi-upload me-1"></i>Import</button>
+        <a href="{% url 'mgmt_wallet_import' %}" class="btn btn-outline-secondary btn-sm px-4">Start Over</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Step 3: Result -->
+  {% elif step == 'done' %}
+  <div class="table-card p-4">
+    <h6 class="mb-4"><i class="bi bi-clipboard-check me-2 text-success"></i>Import Complete</h6>
+
+    <div class="row g-3 mb-4">
+      <div class="col-4">
+        <div class="stat-card text-center">
+          <div class="val text-success">{{ result.success }}</div>
+          <div class="lbl">Imported</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="stat-card text-center">
+          <div class="val text-warning">{{ result.skipped }}</div>
+          <div class="lbl">Skipped (duplicate)</div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="stat-card text-center">
+          <div class="val text-danger">{{ result.errors|length }}</div>
+          <div class="lbl">Errors</div>
+        </div>
+      </div>
+    </div>
+
+    {% if result.errors %}
+    <div class="alert alert-warning py-2 mb-3" style="font-size:.8rem;">
+      <strong>Errors (first 20):</strong>
+      <ul class="mb-0 mt-1">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'mgmt_wallet_import' %}" class="btn btn-outline-secondary btn-sm">Import Another File</a>
+      {% if result.success %}
+      <a href="{% url 'mgmt_table' 'wallet_transactions' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-arrow-right me-1"></i>View Transactions
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+<style>
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0;
+  color: #64748b; font-size: .78rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-dot.active { background: #4f46e5; color: #fff; }
+.step-dot.done { background: #16a34a; color: #fff; }
+.step-line { flex: 1; height: 2px; background: #e2e8f0; min-width: 40px; }
+</style>
+{% endblock %}

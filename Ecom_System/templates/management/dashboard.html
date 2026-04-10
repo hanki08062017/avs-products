@@ -1,0 +1,86 @@
+{% extends "management/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_heading %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="row g-3 mb-4">
+  {% for s in stats %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="icon" style="background:{{ s.bg }};">
+        <i class="bi {{ s.icon }}" style="color:{{ s.color }};"></i>
+      </div>
+      <div>
+        <div class="val">{{ s.value }}</div>
+        <div class="lbl">{{ s.label }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="table-card">
+      <div class="tc-header">
+        <h6><i class="bi bi-cart3 me-2 text-primary"></i>Recent Orders</h6>
+        <a href="{% url 'mgmt_table' 'orders' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for o in recent_orders %}
+            <tr>
+              <td><code>{{ o.order_id }}</code></td>
+              <td>{{ o.customer_name }}</td>
+              <td>₹{{ o.total_amount }}</td>
+              <td>
+                <span class="badge-status badge
+                  {% if o.order_status == 'Delivered' %}bg-success
+                  {% elif o.order_status == 'Cancelled' %}bg-danger
+                  {% elif o.order_status == 'Shipped' %}bg-info text-dark
+                  {% else %}bg-warning text-dark{% endif %}">
+                  {{ o.order_status }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">No orders</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="table-card">
+      <div class="tc-header">
+        <h6><i class="bi bi-people me-2 text-success"></i>Recent Customers</h6>
+        <a href="{% url 'mgmt_table' 'customers' %}" class="btn btn-sm btn-outline-success">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for c in recent_customers %}
+            <tr>
+              <td>{{ c.username }}</td>
+              <td>{{ c.first_name }} {{ c.last_name }}</td>
+              <td>{{ c.email }}</td>
+              <td>
+                <span class="badge-status badge {% if c.status %}bg-success{% else %}bg-secondary{% endif %}">
+                  {% if c.status %}Active{% else %}Inactive{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">No customers</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

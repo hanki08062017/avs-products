@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AVS Management — {% block title %}Dashboard{% endblock %}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+  :root { --sidebar-w: 240px; --accent: #4f46e5; --accent-hover: #4338ca; }
+  body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+  #sidebar {
+    width: var(--sidebar-w); height: 100vh; background: #1e1b4b;
+    position: fixed; top: 0; left: 0; z-index: 100;
+    overflow-y: auto; overflow-x: hidden;
+    transition: transform .25s;
+    scrollbar-width: thin;
+    scrollbar-color: #4f46e5 #1e1b4b;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: #1e1b4b; }
+  #sidebar::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 4px; }
+  #sidebar .brand { padding: 1.2rem 1rem; border-bottom: 1px solid #312e81; }
+  #sidebar .brand span { color: #fff; font-size: 1.1rem; font-weight: 700; }
+  #sidebar .brand small { color: #a5b4fc; font-size: .72rem; display: block; }
+  .nav-section { padding: .6rem 1rem .2rem; color: #818cf8; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+  #sidebar .nav-link {
+    color: #c7d2fe; padding: .45rem 1rem; border-radius: 6px; margin: 1px 8px;
+    font-size: .85rem; display: flex; align-items: center; gap: .5rem;
+  }
+  #sidebar .nav-link:hover, #sidebar .nav-link.active { background: var(--accent); color: #fff; }
+  #main { margin-left: var(--sidebar-w); min-height: 100vh; }
+  #topbar {
+    background: #fff; border-bottom: 1px solid #e2e8f0;
+    padding: .75rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 99;
+  }
+  #topbar .page-title { font-weight: 600; font-size: 1rem; color: #1e293b; margin: 0; }
+  .content { padding: 1.5rem; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 1.2rem 1.4rem; border: 1px solid #e2e8f0; }
+  .stat-card .icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+  .stat-card .val { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
+  .stat-card .lbl { font-size: .78rem; color: #64748b; }
+  .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+  .table-card .tc-header { padding: .9rem 1.2rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+  .table-card .tc-header h6 { margin: 0; font-weight: 600; font-size: .9rem; }
+  .table-responsive { max-height: 70vh; overflow-y: auto; }
+  table thead th { background: #f8fafc; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; border-bottom: 2px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; }
+  table tbody td { font-size: .83rem; vertical-align: middle; }
+  .badge-status { font-size: .72rem; padding: .3em .6em; border-radius: 20px; font-weight: 500; }
+  .search-box { max-width: 260px; }
+  .search-box input { font-size: .83rem; border-radius: 8px; }
+  .btn-sm { font-size: .78rem; }
+  .btn-xs { font-size: .72rem; padding: .2rem .45rem; border-radius: 5px; }
+  @media(max-width:768px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand">
+    <span><i class="bi bi-grid-3x3-gap-fill me-2"></i>AVS Panel</span>
+    <small>Management Dashboard</small>
+  </div>
+  <nav class="py-2">
+    <div class="nav-section">Overview</div>
+    <a href="{% url 'mgmt_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'mgmt_dashboard' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+
+    <div class="nav-section">Business</div>
+    <a href="{% url 'mgmt_table' 'business' %}" class="nav-link {% if table == 'business' %}active{% endif %}">
+      <i class="bi bi-building"></i> Business Details
+    </a>
+    <a href="{% url 'mgmt_table' 'gst' %}" class="nav-link {% if table == 'gst' %}active{% endif %}">
+      <i class="bi bi-receipt"></i> GST Details
+    </a>
+
+    <div class="nav-section">Products</div>
+    <a href="{% url 'mgmt_table' 'products' %}" class="nav-link {% if table == 'products' %}active{% endif %}">
+      <i class="bi bi-box-seam"></i> Products
+    </a>
+    <a href="{% url 'mgmt_table' 'categories' %}" class="nav-link {% if table == 'categories' %}active{% endif %}">
+      <i class="bi bi-tags"></i> Categories
+    </a>
+    <a href="{% url 'mgmt_table' 'units' %}" class="nav-link {% if table == 'units' %}active{% endif %}">
+      <i class="bi bi-rulers"></i> Units
+    </a>
+
+    <div class="nav-section">Orders & Payments</div>
+    <a href="{% url 'mgmt_table' 'orders' %}" class="nav-link {% if table == 'orders' %}active{% endif %}">
+      <i class="bi bi-cart3"></i> Orders
+    </a>
+    <a href="{% url 'mgmt_table' 'payments' %}" class="nav-link {% if table == 'payments' %}active{% endif %}">
+      <i class="bi bi-credit-card"></i> Payments
+    </a>
+    <a href="{% url 'mgmt_table' 'refunds' %}" class="nav-link {% if table == 'refunds' %}active{% endif %}">
+      <i class="bi bi-arrow-counterclockwise"></i> Refunds
+    </a>
+
+    <div class="nav-section">Wallet</div>
+    <a href="{% url 'mgmt_table' 'wallets' %}" class="nav-link {% if table == 'wallets' %}active{% endif %}">
+      <i class="bi bi-wallet2"></i> Wallets
+    </a>
+    <a href="{% url 'mgmt_table' 'wallet_transactions' %}" class="nav-link {% if table == 'wallet_transactions' %}active{% endif %}">
+      <i class="bi bi-arrow-left-right"></i> Wallet Transactions
+    </a>
+    <a href="{% url 'mgmt_table' 'wallet_api_config' %}" class="nav-link {% if table == 'wallet_api_config' %}active{% endif %}">
+      <i class="bi bi-sliders"></i> Wallet API Config
+    </a>
+    <a href="{% url 'mgmt_wallet_import' %}" class="nav-link {% if active == 'wallet_import' %}active{% endif %}">
+      <i class="bi bi-file-earmark-arrow-up"></i> Import Transactions
+    </a>
+
+    <div class="nav-section">Customers & Staff</div>
+    <a href="{% url 'mgmt_table' 'customers' %}" class="nav-link {% if table == 'customers' %}active{% endif %}">
+      <i class="bi bi-people"></i> Customers
+    </a>
+    <a href="{% url 'mgmt_table' 'staff_users' %}" class="nav-link {% if table == 'staff_users' %}active{% endif %}">
+      <i class="bi bi-person-circle"></i> Staff Users
+    </a>
+    <a href="{% url 'mgmt_table' 'staff' %}" class="nav-link {% if table == 'staff' %}active{% endif %}">
+      <i class="bi bi-person-badge"></i> Staff (Business)
+    </a>
+
+    <div class="nav-section">Delivery</div>
+    <a href="{% url 'mgmt_table' 'delivery_settings' %}" class="nav-link {% if table == 'delivery_settings' %}active{% endif %}">
+      <i class="bi bi-gear"></i> Delivery Settings
+    </a>
+    <a href="{% url 'mgmt_table' 'delivery_zones' %}" class="nav-link {% if table == 'delivery_zones' %}active{% endif %}">
+      <i class="bi bi-map"></i> Delivery Zones
+    </a>
+
+
+  </nav>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-sm btn-light d-md-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+      <h6 class="page-title">{% block page_heading %}Dashboard{% endblock %}</h6>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted" style="font-size:.82rem;"><i class="bi bi-person-circle me-1"></i>{{ request.session.mgmt_name|default:"Admin" }}</span>
+      <a href="{% url 'mgmt_logout' %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+  </div>
+
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function filterTable(inputId, tableId) {
+  const q = document.getElementById(inputId).value.toLowerCase();
+  document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

@@ -15,8 +15,11 @@ def config_view(request):
     staff = Staff.objects.get(username=staff_user, business_code=business_code)
     is_admin = staff.staff_role in ['Seller-Admin', 'Shop-Admin']
     
-    categories = ProductCategory.objects.all()
-    units = UnitOfMeasurement.objects.all()
+    # Get all staff usernames for this business to filter seller-specific data
+    business_staff_usernames = list(Staff.objects.filter(business_code=business_code).values_list('username__username', flat=True))
+
+    categories = ProductCategory.objects.filter(created_by__in=business_staff_usernames)
+    units = UnitOfMeasurement.objects.filter(created_by__in=business_staff_usernames)
     gst_details = GSTDetail.objects.filter(business_code=business_code)
     
     delivery_zones = DeliveryZone.objects.filter(business_code=business_code)

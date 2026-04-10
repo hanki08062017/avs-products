@@ -26,6 +26,9 @@ body { background: #f8f9fa; }
             <div class="mb-3">
                 <label class="form-label">Password</label>
                 <input type="password" class="form-control" name="password" required>
+                <div class="text-end mt-1">
+                  <a href="{% url 'forgot_password' %}" style="font-size:.82rem;">Forgot Password?</a>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary w-100" style="padding: 0.8rem; font-weight: 600;">Login</button>
         </form>

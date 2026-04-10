@@ -525,6 +525,81 @@ class WalletTransaction(models.Model):
         return f"{self.transaction_id} - {self.avs_customer_name} ({self.transaction_type})"
 
 
+class WalletAPIConfig(models.Model):
+    class Meta:
+        db_table = 'wallet_api_config'
+
+    STATUS_CHOICES = [('Active', 'Active'), ('Inactive', 'Inactive')]
+    AUTH_TYPE_CHOICES = [
+        ('api_key_header', 'API Key (Header)'),
+        ('api_key_param', 'API Key (Query Param)'),
+        ('bearer_token', 'Bearer Token'),
+        ('basic_auth', 'Basic Auth'),
+        ('none', 'No Auth'),
+    ]
+    METHOD_CHOICES = [('POST', 'POST'), ('GET', 'GET')]
+
+    id = models.AutoField(primary_key=True)
+    config_name = models.CharField(max_length=100, unique=True)
+    source_name = models.CharField(max_length=100)
+    endpoint_url = models.CharField(max_length=500, blank=True, default='')
+    http_method = models.CharField(max_length=10, choices=METHOD_CHOICES, default='POST')
+    auth_type = models.CharField(max_length=30, choices=AUTH_TYPE_CHOICES, default='api_key_header')
+    auth_key_name = models.CharField(max_length=100, blank=True, help_text='Header/param name for API key, e.g. X-API-Key')
+    auth_key_value = models.CharField(max_length=255, blank=True)
+    extra_headers = models.TextField(blank=True, help_text='JSON object of extra headers, e.g. {"Content-Type": "application/json"}')
+    request_body_template = models.TextField(blank=True, help_text='JSON template for request body. Use {field} placeholders.')
+    # Response field mapping: which field in the JSON response holds each value
+    resp_transaction_id = models.CharField(max_length=100, default='transaction_id')
+    resp_customer_id = models.CharField(max_length=100, default='avs_customer_id')
+    resp_customer_name = models.CharField(max_length=100, default='avs_customer_name')
+    resp_mobile = models.CharField(max_length=100, default='mobile')
+    resp_amount = models.CharField(max_length=100, default='amount')
+    resp_type = models.CharField(max_length=100, default='type', help_text='Field name for Credit/Debit in response')
+    resp_transaction_date = models.CharField(max_length=100, default='transaction_date')
+    resp_transaction_for = models.CharField(max_length=100, default='transaction_for', blank=True)
+    resp_transaction_by = models.CharField(max_length=100, default='transaction_by', blank=True)
+    resp_data_path = models.CharField(max_length=200, blank=True, help_text='Dot-path to the list in response JSON, e.g. data.transactions')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.CharField(max_length=100)
+    modified_at = models.DateTimeField(auto_now=True)
+    modified_by = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.config_name} ({self.source_name})'
+
+
+class ManagementUser(models.Model):
+    class Meta:
+        db_table = 'management_user'
+
+    ROLE_CHOICES = [
+        ('Super Admin', 'Super Admin'),
+        ('Admin', 'Admin'),
+        ('Viewer', 'Viewer'),
+    ]
+
+    STATUS_CHOICES = [
+        ('Active', 'Active'),
+        ('Inactive', 'Inactive'),
+    ]
+
+    username = models.CharField(max_length=100, unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20)
+    password = models.CharField(max_length=255)
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='Admin')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_login = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.username})"
+
+
 class Refund(models.Model):
     REFUND_STATUS_CHOICES = [
         ('Pending', 'Pending'),

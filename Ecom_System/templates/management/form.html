@@ -1,0 +1,71 @@
+{% extends "management/base.html" %}
+{% block title %}{{ action }} {{ title }}{% endblock %}
+{% block page_heading %}{{ action }} {{ title }}{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="table-card p-4">
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h6 class="mb-0"><i class="bi {{ icon }} me-2"></i>{{ action }} {{ title }}</h6>
+        <a href="{% url 'mgmt_table' table %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+      </div>
+
+      {% if error %}
+      <div class="alert alert-danger py-2 mb-3" style="font-size:.83rem;">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        {% if table == 'staff_users' %}
+        <div class="alert alert-info py-2 mb-3" style="font-size:.82rem;">
+          <i class="bi bi-info-circle me-1"></i> Username will be auto-generated: <strong>last name (2) + first name (4)</strong> in uppercase. e.g. <em>SHARUN</em> → <strong>SHARUN</strong>. A sequence number is appended if already taken.
+        </div>
+        {% endif %}
+        <div class="row g-3">
+          {% for field in fields %}
+          <div class="{% if field.full_width %}col-12{% else %}col-md-6{% endif %}">
+            <label class="form-label" style="font-size:.82rem;font-weight:500;">
+              {{ field.label }}{% if field.required %} <span class="text-danger">*</span>{% endif %}
+            </label>
+
+            {% if field.type == 'select' %}
+            <select name="{{ field.name }}" class="form-select form-select-sm" {% if field.required %}required{% endif %}>
+              <option value="">— Select —</option>
+              {% for opt in field.options %}
+              <option value="{{ opt.value }}" {% if opt.value|stringformat:"s" == field.current|stringformat:"s" %}selected{% endif %}>{{ opt.label }}</option>
+              {% endfor %}
+            </select>
+
+            {% elif field.type == 'textarea' %}
+            <textarea name="{{ field.name }}" class="form-control form-control-sm" rows="3" {% if field.required %}required{% endif %}>{{ field.current }}</textarea>
+
+            {% elif field.type == 'checkbox' %}
+            <div class="form-check mt-1">
+              <input type="checkbox" name="{{ field.name }}" class="form-check-input" id="chk_{{ field.name }}" {% if field.current %}checked{% endif %}>
+              <label class="form-check-label" for="chk_{{ field.name }}" style="font-size:.83rem;">{{ field.label }}</label>
+            </div>
+
+            {% else %}
+            <input type="{{ field.type|default:'text' }}" name="{{ field.name }}" value="{{ field.current }}"
+              class="form-control form-control-sm" {% if field.required %}required{% endif %}
+              {% if field.readonly %}readonly{% endif %}
+              placeholder="{{ field.label }}">
+            {% endif %}
+
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check-lg me-1"></i>{% if action == 'Edit' %}Save{% else %}{{ action }}{% endif %}
+          </button>
+          <a href="{% url 'mgmt_table' table %}" class="btn btn-outline-secondary btn-sm px-4">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

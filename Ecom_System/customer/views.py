@@ -352,6 +352,82 @@ def profile_view(request, username):
         return redirect('login')
 
 
+def forgot_password(request):
+    step = request.session.get('fp_step', 'identify')
+    error = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        # Step 1: Find account by email or phone
+        if action == 'identify':
+            identifier = request.POST.get('identifier', '').strip()
+            customer = Customer.objects.filter(email=identifier).first() or \
+                       Customer.objects.filter(phone=identifier).first()
+            if not customer:
+                error = 'No account found with that email or phone number.'
+            else:
+                import random
+                otp = str(random.randint(100000, 999999))
+                request.session['fp_otp'] = otp
+                request.session['fp_username'] = customer.username
+                request.session['fp_step'] = 'verify'
+                # In production send via SMS/email — for now print to console
+                print(f'[OTP] Forgot password OTP for {customer.username}: {otp}')
+                return render(request, 'customer/forgot_password.html', {
+                    'step': 'verify',
+                    'masked': _mask_contact(customer.email, customer.phone),
+                    'demo_otp': otp,
+                })
+
+        # Step 2: Verify OTP
+        elif action == 'verify':
+            entered = request.POST.get('otp', '').strip()
+            if entered == request.session.get('fp_otp'):
+                request.session['fp_step'] = 'reset'
+                request.session['fp_verified'] = True
+                return render(request, 'customer/forgot_password.html', {'step': 'reset'})
+            else:
+                error = 'Invalid OTP. Please try again.'
+                return render(request, 'customer/forgot_password.html', {
+                    'step': 'verify',
+                    'masked': request.session.get('fp_masked', ''),
+                    'error': error,
+                })
+
+        # Step 3: Reset password
+        elif action == 'reset':
+            if not request.session.get('fp_verified'):
+                return redirect('forgot_password')
+            new_pw = request.POST.get('new_password', '')
+            confirm_pw = request.POST.get('confirm_password', '')
+            if len(new_pw) < 6:
+                error = 'Password must be at least 6 characters.'
+            elif new_pw != confirm_pw:
+                error = 'Passwords do not match.'
+            else:
+                username = request.session.get('fp_username')
+                Customer.objects.filter(username=username).update(password=new_pw)
+                for k in ('fp_otp', 'fp_username', 'fp_step', 'fp_verified', 'fp_masked'):
+                    request.session.pop(k, None)
+                return render(request, 'customer/forgot_password.html', {'step': 'done'})
+            return render(request, 'customer/forgot_password.html', {'step': 'reset', 'error': error})
+
+    # Clear any stale session on fresh GET
+    for k in ('fp_otp', 'fp_username', 'fp_step', 'fp_verified', 'fp_masked'):
+        request.session.pop(k, None)
+    return render(request, 'customer/forgot_password.html', {'step': 'identify', 'error': error})
+
+
+def _mask_contact(email, phone):
+    masked_email = ''
+    if email:
+        parts = email.split('@')
+        masked_email = parts[0][:2] + '***@' + parts[1]
+    masked_phone = phone[:2] + '****' + phone[-2:] if phone else ''
+    return masked_email or masked_phone
+
+
 def change_password(request):
     if not request.session.get('is_logged_in'):
         return redirect('login')
